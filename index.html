@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obesity Killer - Live Flash Sale</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --primary-maroon: #4A1212;
+            --primary-orange: #FF6B00;
+            --secondary-orange: #ff8c00;
+            --text-dark: #333333;
+            --text-light: #ffffff;
+            --bg-light: #fdfdfd;
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            --border-radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f4f6f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* --- Main Container --- */
+        .promo-widget {
+            width: 100%;
+            max-width: 950px;
+            background: #fff;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1.25fr 1fr; /* Split between text/timer and chart */
+            border: 1px solid rgba(0,0,0,0.04);
+        }
+
+        /* --- Left Side: Sales Content --- */
+        .promo-content {
+            padding: 35px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Background accent for the left side */
+        .promo-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 6px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--primary-maroon), var(--primary-orange));
+        }
+
+        /* --- Logo Integration --- */
+        .site-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            fill: var(--primary-orange);
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.1;
+        }
+
+        .logo-text strong {
+            color: var(--primary-maroon);
+            font-size: 1.05rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .logo-text span {
+            color: #2e7d32; /* Deep green to match the screenshot's subtext vibe */
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        /* --- Content Styling --- */
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--primary-maroon);
+            font-weight: 600;
+            margin-bottom: 15px;
+            background: #fff0e6;
+            padding: 6px 14px;
+            border-radius: 20px;
+            width: fit-content;
+        }
+
+        .brand-badge span {
+            color: #FFD700; /* Gold star */
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: var(--text-dark);
+            line-height: 1.2;
+            margin-bottom: 10px;
+        }
+
+        h1 span {
+            color: var(--primary-orange);
+        }
+
+        .slogan {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 25px;
+            font-weight: 400;
+        }
+
+        /* Coupon Code Box */
+        .coupon-box {
+            background: #fafafa;
+            border: 2px dashed var(--primary-maroon);
+            padding: 12px 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .coupon-box:hover {
+            background: #fff5f5;
+            transform: translateY(-2px);
+        }
+
+        .coupon-code {
+            font-weight: 700;
+            color: var(--primary-maroon);
+            font-size: 1.15rem;
+            letter-spacing: 1px;
+        }
+
+        .copy-btn {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #fff;
+            background-color: var(--primary-orange);
+            padding: 5px 12px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            transition: background 0.3s;
+        }
+
+        .coupon-box:hover .copy-btn {
+            background-color: var(--primary-maroon);
+        }
+
+        /* Timer Layout */
+        .timer-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .time-box {
+            text-align: center;
+            flex: 1;
+        }
+
+        .time-value {
+            background: var(--primary-maroon);
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 700;
+            padding: 12px 0;
+            border-radius: 8px;
+            display: block;
+            box-shadow: 0 4px 12px rgba(74, 18, 18, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Add a glass reflection to timer boxes */
+        .time-value::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .time-label {
+            font-size: 0.75rem;
+            color: #777;
+            margin-top: 6px;
+            display: block;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* Live Stock Counter */
+        .stock-indicator {
+            margin-top: auto;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            font-weight: 500;
+            background: #fff9f5;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ffe0cc;
+        }
+
+        .stock-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .stock-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-orange), #ff4d4d);
+            width: 85%; /* Starting width */
+            border-radius: 10px;
+            transition: width 1s ease-in-out, background 0.5s ease;
+        }
+
+        .urgency-text {
+            color: #d32f2f;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* --- Right Side: Analytics Chart --- */
+        .analytics-panel {
+            background: #fafbfc;
+            padding: 35px 40px;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #f0f0f0;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #00c853;
+            border-radius: 50%;
+            box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7);
+            animation: livePulse 2s infinite;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 220px; /* Fixed height for the chart */
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        /* Footer inside chart panel */
+        .social-proof {
+            margin-top: auto;
+            padding-top: 25px;
+            border-top: 1px solid #e5e5e5;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .avatar-group {
+            display: flex;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid white;
+            background: #ddd;
+            margin-left: -12px;
+            object-fit: cover;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .avatar:first-child { margin-left: 0; }
+
+        .proof-text {
+            font-size: 0.85rem;
+            color: #555;
+            line-height: 1.4;
+        }
+
+        .proof-text b {
+            color: var(--text-dark);
+        }
+
+        /* --- Animations --- */
+        @keyframes livePulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0, 200, 83, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 200, 83, 0); }
+        }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 850px) {
+            .promo-widget {
+                grid-template-columns: 1fr;
+                max-width: 500px;
+            }
+            .promo-content::before {
+                width: 100%;
+                height: 6px;
+                top: 0;
+                left: 0;
+                background: linear-gradient(to right, var(--primary-maroon), var(--primary-orange));
+            }
+            .analytics-panel {
+                border-left: none;
+                border-top: 1px solid #eee;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="promo-widget">
+        <div class="promo-content">
+            
+            <div class="site-logo">
+                <svg class="logo-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                </svg>
+                <div class="logo-text">
+                    <strong>Dr. Arun Tyagi's</strong>
+                    <span>Obesity Killer Kit</span>
+                </div>
+            </div>
+
+            <div class="brand-badge">
+                <span>★</span> 70,000+ Success Stories
+            </div>
+            
+            <h1>Flash Sale: <br><span>Lose 3-5 kg</span> in 15 days</h1>
+            <p class="slogan">100% Natural. No Hunger. No Weakness.</p>
+
+            <div class="coupon-box" onclick="copyCoupon()">
+                <span class="coupon-code" id="coupon-text">OBESITYKILLER20</span>
+                <span class="copy-btn">Copy Code</span>
+            </div>
+
+            <div class="timer-container">
+                <div class="time-box">
+                    <span class="time-value" id="days">02</span>
+                    <span class="time-label">Days</span>
+                </div>
+                <div class="time-box">
+                    <span class="time-value" id="hours">04</span>
+                    <span class="time-label">Hours</span>
+                </div>
+                <div class="time-box">
+                    <span class="time-value" id="minutes">15</span>
+                    <span class="time-label">Mins</span>
+                </div>
+                <div class="time-box">
+                    <span class="time-value" id="seconds">45</span>
+                    <span class="time-label">Secs</span>
+                </div>
+            </div>
+
+            <div class="stock-indicator">
+                <div class="urgency-text">
+                    <span>High Demand!</span>
+                    <span>Only <span id="orders-left">142</span> left</span>
+                </div>
+                <div class="stock-bar-bg">
+                    <div class="stock-bar-fill" id="stock-bar"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="analytics-panel">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <div class="live-dot"></div>
+                    Live Purchase Activity
+                </div>
+                <span style="font-size: 0.75rem; color: #888; font-weight: 600; text-transform: uppercase;">Real-time</span>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="salesChart"></canvas>
+            </div>
+
+            <div class="social-proof">
+                <div class="avatar-group">
+                    <img src="https://i.pravatar.cc/100?img=12" class="avatar" alt="User">
+                    <img src="https://i.pravatar.cc/100?img=32" class="avatar" alt="User">
+                    <img src="https://i.pravatar.cc/100?img=47" class="avatar" alt="User">
+                </div>
+                <div class="proof-text">
+                    <b><span id="recent-buyers">28</span> people</b> purchased this kit <br>in the last 15 minutes.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Countdown Timer Logic ---
+        const countDownDate = new Date().getTime() + (2 * 24 * 60 * 60 * 1000);
+
+        function updateTimer() {
+            const now = new Date().getTime();
+            const distance = countDownDate - now;
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById("days").innerText = days < 10 ? "0" + days : days;
+            document.getElementById("hours").innerText = hours < 10 ? "0" + hours : hours;
+            document.getElementById("minutes").innerText = minutes < 10 ? "0" + minutes : minutes;
+            document.getElementById("seconds").innerText = seconds < 10 ? "0" + seconds : seconds;
+        }
+        setInterval(updateTimer, 1000);
+        updateTimer(); 
+
+        // --- 2. Simulated Orders Logic (Non-Linear) ---
+        let ordersRemaining = 142;
+        let recentBuyers = 28;
+        const totalStock = 200; 
+
+        function decreaseStock() {
+            // Drop by 1, 2, or 3 occasionally
+            const drop = Math.floor(Math.random() * 3) + 1;
+            ordersRemaining -= drop;
+            recentBuyers += drop;
+            
+            // Loop for demo purposes so it never completely hits 0 in the preview
+            if (ordersRemaining < 12) ordersRemaining = 180; 
+
+            // Update UI
+            document.getElementById("orders-left").innerText = ordersRemaining;
+            document.getElementById("recent-buyers").innerText = recentBuyers;
+
+            // Update Progress Bar Width
+            const percentage = (ordersRemaining / totalStock) * 100;
+            document.getElementById("stock-bar").style.width = percentage + "%";
+            
+            // Turn bar red when urgency is high
+            const bar = document.getElementById("stock-bar");
+            if (percentage < 25) {
+                bar.style.background = "linear-gradient(90deg, #d32f2f, #9c27b0)";
+            } else {
+                bar.style.background = "linear-gradient(90deg, var(--primary-orange), #ff4d4d)";
+            }
+        }
+
+        function loopStock() {
+            // Random interval between 2 to 6 seconds to mimic real traffic
+            const randTime = Math.round(Math.random() * (6000 - 2000)) + 2000; 
+            setTimeout(() => {
+                decreaseStock();
+                updateChartData(); 
+                loopStock();
+            }, randTime);
+        }
+        loopStock();
+
+        // --- 3. Analytics Chart (Chart.js) ---
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        
+        // Gradient for chart area
+        const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+        gradient.addColorStop(0, 'rgba(255, 107, 0, 0.45)'); 
+        gradient.addColorStop(1, 'rgba(255, 107, 0, 0.0)');
+
+        const salesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['10m', '8m', '6m', '4m', '2m', 'Now'],
+                datasets: [{
+                    label: 'Purchases',
+                    data: [12, 18, 14, 26, 21, 32],
+                    borderColor: '#FF6B00', 
+                    backgroundColor: gradient,
+                    borderWidth: 3,
+                    pointBackgroundColor: '#fff', 
+                    pointBorderColor: '#4A1212',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: true,
+                    tension: 0.4 
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#4A1212',
+                        titleFont: { family: 'Poppins' },
+                        bodyFont: { family: 'Poppins' },
+                        padding: 10,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y + ' Orders';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Poppins', size: 11 }, color: '#888' }
+                    },
+                    y: {
+                        display: false, 
+                        suggestedMin: 0,
+                        suggestedMax: 45
+                    }
+                },
+                animation: {
+                    duration: 800,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+
+        // Update Chart
+        function updateChartData() {
+            salesChart.data.labels.shift();
+            salesChart.data.datasets[0].data.shift();
+
+            salesChart.data.labels.push('Now');
+            const newVal = Math.floor(Math.random() * (40 - 15) + 15);
+            salesChart.data.datasets[0].data.push(newVal);
+
+            salesChart.update();
+        }
+
+        // Coupon Copy Logic
+        function copyCoupon() {
+            const code = document.getElementById("coupon-text").innerText;
+            navigator.clipboard.writeText(code);
+            const btn = document.querySelector(".copy-btn");
+            btn.innerText = "Copied!";
+            btn.style.backgroundColor = "var(--primary-maroon)";
+            setTimeout(() => {
+                btn.innerText = "Copy Code";
+                btn.style.backgroundColor = "var(--primary-orange)";
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
