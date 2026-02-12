@@ -768,9 +768,9 @@
         bar.style.width = percentage + "%";
 
         // Dynamic Color: Orange -> Dark Orange -> Panic Red (No Green)
-        if (state.ordersRemaining > 50) {
+        if (state.ordersRemaining > 100) {
           bar.style.background = "linear-gradient(90deg, #ff9800, #ff5722)"; // Standard Orange
-        } else if (state.ordersRemaining > 20) {
+        } else if (state.ordersRemaining > 50) {
           bar.style.background = "linear-gradient(90deg, #ff5722, #d84315)"; // Deep Orange/Red
         } else {
           bar.style.background = "linear-gradient(90deg, #d32f2f, #b71c1c)"; // Critical Red
@@ -806,22 +806,23 @@
       }
 
       function salesLoop() {
-        // FOMO Curve: Speed depends on remaining stock
-        // High Stock (>50): Slow (5-10s)
-        // Med Stock (20-50): Medium (3-6s)
-        // Panic Stock (<20): Fast (2-4s)
+        // FAST DEMO TIMINGS (Adjusted for Urgency)
+        // High Stock (>100): Slow Pace (4s - 7s) -> Browsing Phase
+        // Med Stock (50-100): Moderate Pace (2s - 5s) -> Interest Phase
+        // Panic Stock (<50): High Urgency (0.7s - 2.5s) -> Buying Frenzy Phase
 
         let minDelay, maxDelay;
 
-        if (state.ordersRemaining > 50) {
-          minDelay = 5000;
-          maxDelay = 10000;
-        } else if (state.ordersRemaining > 20) {
-          minDelay = 3000;
-          maxDelay = 6000;
+        if (state.ordersRemaining > 100) {
+          minDelay = 4000;
+          maxDelay = 7000;
+        } else if (state.ordersRemaining > 50) {
+          minDelay = 2000;
+          maxDelay = 5000;
         } else {
-          minDelay = 1500;
-          maxDelay = 4000;
+          // Critical Zone: Never wait longer than 2.5s
+          minDelay = 700;
+          maxDelay = 2500;
         }
 
         const randTime = Math.floor(
@@ -830,8 +831,9 @@
 
         setTimeout(() => {
           decreaseStock();
-          // Only update chart occasionally to keep it cleaner, or on bursts
-          if (Math.random() > 0.5) updateChartData();
+          // Update chart often in panic mode (70%), less often in calm mode (40%)
+          const updateChance = state.ordersRemaining < 50 ? 0.7 : 0.4;
+          if (Math.random() < updateChance) updateChartData();
 
           salesLoop(); // Recursion
         }, randTime);
