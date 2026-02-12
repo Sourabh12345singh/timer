@@ -240,7 +240,7 @@
       /* Live Stock Counter */
       .stock-indicator {
         margin-top: auto;
-        font-size: 0.95rem;
+        font-size: 1.25rem;
         color: var(--text-dark);
         font-weight: 500;
         background: #fff9f5;
@@ -269,10 +269,12 @@
       }
 
       .urgency-text {
+        width: 100%;
         color: #d32f2f;
         font-weight: 700;
         display: flex;
         justify-content: space-between;
+        align-items: center;
       }
 
       /* --- Right Side: Analytics Chart --- */
@@ -502,7 +504,7 @@
 
         /* Stock indicator */
         .stock-indicator {
-          font-size: 0.75rem; /* Reduced to fit better */
+          font-size: 0.95rem; /* Reduced to fit better */
           padding: 10px;
         }
 
@@ -511,8 +513,8 @@
           justify-content: space-between;
           align-items: center;
           gap: 5px;
-          font-size: 0.75rem; /* Smaller font to prevent breaking */
-          white-space: nowrap; /* Prevent wrapping */
+          font-size: 0.85rem; /* Slightly smaller to fit single line on small screens */
+          flex-wrap: wrap; /* Allow wrapping if absolutely necessary */
         }
 
         /* Chart section */
@@ -634,8 +636,8 @@
 
         <div class="stock-indicator">
           <div class="urgency-text">
-            <span>High Demand!</span>
-            <span>Only <span id="orders-left" style="font-weight: 800; color: #5c2a2a;">142</span> left</span>
+            <span style = " font-size: 1.25rem;">High Demand!</span>
+            <span style = " font-size: 1.15rem;">Only <span id="orders-left" style="font-weight: 800; color: #5c2a2a;  font-size: 1.25rem;">142</span> left</span>
           </div>
           <div class="stock-bar-bg">
             <div class="stock-bar-fill" id="stock-bar"></div>
@@ -827,10 +829,14 @@
 
       // Update Chart
       function updateChartData() {
-        salesChart.data.labels.shift();
+        // Remove the oldest data point
         salesChart.data.datasets[0].data.shift();
 
-        salesChart.data.labels.push("Now");
+        // Ensure labels remain relative ("10m" to "Now")
+        // Instead of shifting labels, we just reset them so they always show the same relative timeframe
+        salesChart.data.labels = ["10m", "8m", "6m", "4m", "2m", "Now"];
+
+        // Add new random data point
         const newVal = Math.floor(Math.random() * (40 - 15) + 15);
         salesChart.data.datasets[0].data.push(newVal);
 
