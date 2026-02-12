@@ -86,10 +86,16 @@
         border-bottom: 1px solid #f0f0f0;
       }
 
+      @media (max-width: 480px) {
+        .logo-icon {
+          width: 70px;
+        }
+      }
+
       .logo-icon {
-        width: 32px;
-        height: 32px;
-        fill: var(--primary-orange);
+        width: 100px;
+        height: auto;
+        object-fit: contain;
       }
 
       .logo-text {
@@ -382,11 +388,12 @@
           grid-template-columns: unset;
         }
         /* ensure child elements don't force width */
-        .promo-content, .analytics-panel {
-            width: 100%;
-            min-width: 0; 
+        .promo-content,
+        .analytics-panel {
+          width: 100%;
+          min-width: 0;
         }
-        
+
         .promo-content::before {
           width: 100%;
           height: 6px;
@@ -430,11 +437,6 @@
           margin-bottom: 18px;
           padding-bottom: 15px;
           gap: 10px;
-        }
-
-        .logo-icon {
-          width: 28px;
-          height: 28px;
         }
 
         .logo-text strong {
@@ -522,7 +524,7 @@
           margin-bottom: 15px;
           flex-wrap: wrap;
         }
-        
+
         .chart-title {
           font-size: 0.9rem;
           /* Removed white-space: nowrap to prevent forcing width */
@@ -590,22 +592,8 @@
     <div class="promo-widget">
       <div class="promo-content">
         <div class="site-logo">
-          <svg
-            class="logo-icon"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
-            />
-          </svg>
-          <div class="logo-text">
-            <strong>Dr. Arun Tyagi's</strong>
-            <span>Obesity Killer Kit</span>
-          </div>
+          <img src="sale.png" class="logo-icon" alt="Sale Logo" />
         </div>
-
-        <div class="brand-badge"><span>★</span> 70,000+ Success Stories</div>
 
         <h1>Flash Sale: <br /><span>Lose 3-5 kg</span> in 15 days</h1>
         <p class="slogan">100% Natural. No Hunger. No Weakness.</p>
@@ -636,8 +624,16 @@
 
         <div class="stock-indicator">
           <div class="urgency-text">
-            <span style = " font-size: 1.25rem;">High Demand!</span>
-            <span style = " font-size: 1.15rem;">Only <span id="orders-left" style="font-weight: 800; color: #5c2a2a;  font-size: 1.25rem;">142</span> left</span>
+            <span style="font-size: 1.25rem">High Demand!</span>
+            <span style="font-size: 1.15rem"
+              >Only
+              <span
+                id="orders-left"
+                style="font-weight: 800; color: #5c2a2a; font-size: 1.25rem"
+                >142</span
+              >
+              left</span
+            >
           </div>
           <div class="stock-bar-bg">
             <div class="stock-bar-fill" id="stock-bar"></div>
@@ -693,8 +689,22 @@
     </div>
 
     <script>
-      // --- 1. Countdown Timer Logic ---
-      const countDownDate = new Date().getTime() + 2 * 24 * 60 * 60 * 1000;
+      // --- 1. Countdown Timer Logic (Persistent) ---
+      const TIMER_KEY = "obesity_killer_timer_v1";
+      let countDownDate = localStorage.getItem(TIMER_KEY);
+
+      if (!countDownDate) {
+        // Set for 48 hours from now if not exists
+        countDownDate = new Date().getTime() + 2 * 24 * 60 * 60 * 1000;
+        localStorage.setItem(TIMER_KEY, countDownDate);
+      } else {
+        countDownDate = parseInt(countDownDate);
+        // If expired, reset it to new 48 hours (Evergreen)
+        if (new Date().getTime() > countDownDate) {
+          countDownDate = new Date().getTime() + 2 * 24 * 60 * 60 * 1000;
+          localStorage.setItem(TIMER_KEY, countDownDate);
+        }
+      }
 
       function updateTimer() {
         const now = new Date().getTime();
@@ -719,48 +729,117 @@
       setInterval(updateTimer, 1000);
       updateTimer();
 
-      // --- 2. Simulated Orders Logic (Non-Linear) ---
-      let ordersRemaining = 142;
-      let recentBuyers = 28;
-      const totalStock = 200;
+      // --- 2. Production Ready "FOMO" Stock Logic (Persistent) ---
 
-      function decreaseStock() {
-        // Drop by 1, 2, or 3 occasionally
-        const drop = Math.floor(Math.random() * 3) + 1;
-        ordersRemaining -= drop;
-        recentBuyers += drop;
+      // Configuration
+      const STARTING_STOCK = 142;
+      const MIN_STOCK = 3; // Don't let it hit 0 completely to keep sales open
+      const STORAGE_KEY = "obesity_killer_stock_v1";
 
-        // Loop for demo purposes so it never completely hits 0 in the preview
-        if (ordersRemaining < 12) ordersRemaining = 180;
+      // Initialize State from LocalStorage or Default
+      let state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
+        ordersRemaining: STARTING_STOCK,
+        recentBuyers: 28,
+        lastUpdate: Date.now(),
+      };
 
-        // Update UI
-        document.getElementById("orders-left").innerText = ordersRemaining;
-        document.getElementById("recent-buyers").innerText = recentBuyers;
+      // Reset if it's been more than 24 hours (simulating a new daily sale)
+      if (Date.now() - state.lastUpdate > 24 * 60 * 60 * 1000) {
+        state.ordersRemaining = STARTING_STOCK;
+        state.recentBuyers = 28;
+      }
 
-        // Update Progress Bar Width
-        const percentage = (ordersRemaining / totalStock) * 100;
-        document.getElementById("stock-bar").style.width = percentage + "%";
+      function saveState() {
+        state.lastUpdate = Date.now();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
 
-        // Turn bar red when urgency is high
+      function updateDisplay() {
+        const totalStock = 200; // Visual reference for bar width
+
+        // Update Text
+        document.getElementById("orders-left").innerText =
+          state.ordersRemaining;
+        document.getElementById("recent-buyers").innerText = state.recentBuyers;
+
+        // Update Progress Bar
+        const percentage = (state.ordersRemaining / totalStock) * 100;
         const bar = document.getElementById("stock-bar");
-        if (percentage < 25) {
-          bar.style.background = "linear-gradient(90deg, #d32f2f, #9c27b0)";
+        bar.style.width = percentage + "%";
+
+        // Dynamic Color: Orange -> Dark Orange -> Panic Red (No Green)
+        if (state.ordersRemaining > 50) {
+          bar.style.background = "linear-gradient(90deg, #ff9800, #ff5722)"; // Standard Orange
+        } else if (state.ordersRemaining > 20) {
+          bar.style.background = "linear-gradient(90deg, #ff5722, #d84315)"; // Deep Orange/Red
         } else {
-          bar.style.background =
-            "linear-gradient(90deg, var(--primary-orange), #ff4d4d)";
+          bar.style.background = "linear-gradient(90deg, #d32f2f, #b71c1c)"; // Critical Red
         }
       }
 
-      function loopStock() {
-        // Random interval between 2 to 6 seconds to mimic real traffic
-        const randTime = Math.round(Math.random() * (6000 - 2000)) + 2000;
+      function decreaseStock() {
+        // Stop decrementing if we hit minimum safety stock
+        if (state.ordersRemaining <= MIN_STOCK) return;
+
+        // Logic:
+        // 1. Burst Mode (10% chance): Drop 3-5 items at once
+        // 2. Normal Mode: Drop 1 item
+
+        const isBurst = Math.random() < 0.1;
+        const dropAmount = isBurst ? Math.floor(Math.random() * 3) + 2 : 1;
+
+        // Ensure we don't go below min
+        const actualDrop = Math.min(
+          dropAmount,
+          state.ordersRemaining - MIN_STOCK,
+        );
+
+        if (actualDrop > 0) {
+          state.ordersRemaining -= actualDrop;
+          state.recentBuyers += actualDrop;
+          saveState();
+          updateDisplay();
+
+          // If it was a burst, update the chart immediately
+          if (isBurst) updateChartData();
+        }
+      }
+
+      function salesLoop() {
+        // FOMO Curve: Speed depends on remaining stock
+        // High Stock (>50): Slow (5-10s)
+        // Med Stock (20-50): Medium (3-6s)
+        // Panic Stock (<20): Fast (2-4s)
+
+        let minDelay, maxDelay;
+
+        if (state.ordersRemaining > 50) {
+          minDelay = 5000;
+          maxDelay = 10000;
+        } else if (state.ordersRemaining > 20) {
+          minDelay = 3000;
+          maxDelay = 6000;
+        } else {
+          minDelay = 1500;
+          maxDelay = 4000;
+        }
+
+        const randTime = Math.floor(
+          Math.random() * (maxDelay - minDelay + 1) + minDelay,
+        );
+
         setTimeout(() => {
           decreaseStock();
-          updateChartData();
-          loopStock();
+          // Only update chart occasionally to keep it cleaner, or on bursts
+          if (Math.random() > 0.5) updateChartData();
+
+          salesLoop(); // Recursion
         }, randTime);
       }
-      loopStock();
+
+      // Initialize
+      updateDisplay();
+      salesLoop();
 
       // --- 3. Analytics Chart (Chart.js) ---
       const ctx = document.getElementById("salesChart").getContext("2d");
