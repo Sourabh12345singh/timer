@@ -7,10 +7,22 @@
 
     <!--
     ============================================================
-    PREMIUM REBUILD v2 — theobesitykiller.com Widget
+    PREMIUM REBUILD v3 — theobesitykiller.com Widget
     ============================================================
     Warm premium bento-style layout with micro-interactions.
     Design tokens from theobesitykiller.com/products/shop
+    
+    v3 changes:
+    - Chart: replaced Chart.js with custom "Pulse Chart" canvas engine
+    - Self-drawing progressive line animation on load
+    - Particle trail system (orange particles drift from data points)
+    - Ring pulse effects on new data arrival
+    - Floating "+N orders" labels on burst events
+    - Breathing gradient fill that responds to activity level
+    - Activity heat glow intensifies in urgent/panic phases
+    - Ambient background dots for visual depth
+    - Scan line sweep effect
+    - No external chart library dependency
     
     v2 changes:
     - Offer banner: toned down, elegant not screaming
@@ -27,7 +39,7 @@
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom canvas chart — no library needed -->
 
     <style>
       /* ================================
@@ -181,6 +193,7 @@
       }
 
       .brand-logo {
+        transform: rotate(349deg);
         width: 50px;
         height: 50px;
         object-fit: contain;
@@ -721,44 +734,100 @@
         position: relative;
         flex: 1;
         min-height: 0;
-        height: 200px;
+        height: 220px;
         background: var(--bg-white);
         border-radius: var(--radius-md);
-        padding: 14px 10px 10px 10px;
         box-shadow: var(--shadow-sm);
         border: 1px solid var(--border-light);
         overflow: hidden;
       }
 
-      .chart-area::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image:
-          linear-gradient(rgba(0,0,0,0.012) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(0,0,0,0.012) 1px, transparent 1px);
-        background-size: 40px 40px;
-        pointer-events: none;
-        border-radius: var(--radius-md);
+      .chart-area canvas {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
       }
 
-      .chart-scan {
+      /* Floating order labels */
+      .float-order {
         position: absolute;
-        top: 0;
-        width: 1.5px;
-        height: 100%;
-        background: linear-gradient(180deg, transparent, rgba(245,130,31,0.2), transparent);
+        font-family: var(--font);
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: var(--orange);
         pointer-events: none;
+        white-space: nowrap;
         opacity: 0;
-        z-index: 2;
-        animation: scanLine 8s linear infinite;
+        animation: floatUp 1.8s var(--ease-out) forwards;
+        z-index: 3;
+        text-shadow: 0 1px 4px rgba(245,130,31,0.15);
       }
 
-      @keyframes scanLine {
-        0% { left: 0; opacity: 0; }
-        5% { opacity: 0.5; }
-        95% { opacity: 0.5; }
-        100% { left: 100%; opacity: 0; }
+      @keyframes floatUp {
+        0%   { opacity: 0; transform: translateY(0) scale(0.8); }
+        15%  { opacity: 1; transform: translateY(-6px) scale(1); }
+        80%  { opacity: 0.7; transform: translateY(-32px) scale(0.95); }
+        100% { opacity: 0; transform: translateY(-48px) scale(0.85); }
+      }
+
+      /* Activity intensity indicator bar under chart */
+      .chart-intensity {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--orange), transparent);
+        opacity: 0;
+        transition: opacity 0.6s ease;
+      }
+
+      .chart-intensity.active {
+        opacity: 0.5;
+        animation: intensityPulse 2s ease-in-out infinite;
+      }
+
+      @keyframes intensityPulse {
+        0%, 100% { opacity: 0.3; }
+        50% { opacity: 0.6; }
+      }
+
+      /* Chart tooltip */
+      .chart-tooltip {
+        position: absolute;
+        pointer-events: none;
+        background: rgba(18, 18, 18, 0.92);
+        color: #fff;
+        font-family: var(--font);
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid rgba(245, 130, 31, 0.2);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        opacity: 0;
+        transition: opacity 0.15s ease, transform 0.15s ease;
+        transform: translateY(4px);
+        z-index: 10;
+        white-space: nowrap;
+      }
+
+      .chart-tooltip.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .chart-tooltip .tt-label {
+        font-size: 0.58rem;
+        font-weight: 500;
+        color: rgba(255,255,255,0.55);
+        margin-bottom: 1px;
+      }
+
+      .chart-tooltip .tt-value {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--orange);
       }
 
       /* --- Social Proof --- */
@@ -819,12 +888,12 @@
          CHART UPDATE FLASH
          ================================ */
       .chart-area.flash {
-        animation: chartFlash 0.5s ease;
+        animation: chartFlash 0.6s ease;
       }
 
       @keyframes chartFlash {
         0% { box-shadow: var(--shadow-sm); }
-        30% { box-shadow: 0 0 16px rgba(245,130,31,0.1), var(--shadow-sm); }
+        25% { box-shadow: 0 0 20px rgba(245,130,31,0.12), 0 0 40px rgba(245,130,31,0.04), var(--shadow-sm); }
         100% { box-shadow: var(--shadow-sm); }
       }
 
@@ -917,7 +986,7 @@
         .t-val { height: 44px; font-size: 1.15rem; }
         .t-lbl { font-size: 0.48rem; }
 
-        .chart-area { height: 170px; padding: 10px 8px 8px 8px; }
+        .chart-area { height: 180px; }
         .chart-title { font-size: 0.8rem; }
 
         .proof-avatars img { width: 30px; height: 30px; }
@@ -1083,8 +1152,12 @@
         </div>
 
         <div class="chart-area" id="chart-container">
-          <div class="chart-scan"></div>
           <canvas id="salesChart"></canvas>
+          <div class="chart-tooltip" id="chart-tooltip">
+            <div class="tt-label">2m ago</div>
+            <div class="tt-value">24 orders</div>
+          </div>
+          <div class="chart-intensity" id="chart-intensity"></div>
         </div>
 
         <div class="proof">
@@ -1185,7 +1258,7 @@
 
       function save() { st.t = Date.now(); localStorage.setItem(SK, JSON.stringify(st)); }
 
-      function render() {
+      function renderStock() {
         const el = document.getElementById("orders-left");
         const oldVal = el.textContent;
         el.textContent = st.r;
@@ -1241,8 +1314,8 @@
         st.r -= n;
         st.b += n;
         save();
-        render();
-        if (burst) pushChart();
+        renderStock();
+        if (burst) pushChart(n);
       }
 
       function loop() {
@@ -1269,159 +1342,663 @@
           loop();
         }, ~~(Math.random() * (hi - lo + 1)) + lo);
       }
-      render(); loop();
+      renderStock(); loop();
 
       /* ==================================
-         3. CHART
+         3. PULSE CHART — Custom Canvas Visualization
+         ==================================
+         Fully custom canvas rendering. No chart library.
+         Features:
+           - Self-drawing progressive line
+           - Gradient mesh fill that breathes
+           - Particle trail drifting upward
+           - Ring pulse on data points
+           - Floating "+N orders" labels
+           - Ambient background dots for depth
+           - Elastic animation when new data arrives
+           - Activity heat glow scales with urgency
          ================================== */
       const canvas = document.getElementById("salesChart");
-      const cx = canvas.getContext("2d");
+      const ctx = canvas.getContext("2d");
+      const container = document.getElementById("chart-container");
+      const intensityBar = document.getElementById("chart-intensity");
 
-      function createGradient(ctx, chartArea) {
-        const g = ctx.createLinearGradient(0, chartArea ? chartArea.top : 0, 0, chartArea ? chartArea.bottom : 200);
-        g.addColorStop(0, "rgba(245, 130, 31, 0.22)");
-        g.addColorStop(0.5, "rgba(245, 130, 31, 0.08)");
-        g.addColorStop(1, "rgba(245, 130, 31, 0.0)");
-        return g;
+      /* Check reduced motion preference */
+      const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      /* Hi-DPI support */
+      let dpr = window.devicePixelRatio || 1;
+      let W, H;
+
+      function resizeCanvas() {
+        const rect = container.getBoundingClientRect();
+        W = rect.width;
+        H = rect.height;
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.width = W + "px";
+        canvas.style.height = H + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      resizeCanvas();
+      /* Use ResizeObserver for container resize (layout changes, responsive breakpoints) */
+      if (typeof ResizeObserver !== "undefined") {
+        new ResizeObserver(resizeCanvas).observe(container);
+      } else {
+        window.addEventListener("resize", resizeCanvas);
       }
 
-      /* Custom plugin: animated glow on last data point */
-      const glowPointPlugin = {
-        id: 'glowPoint',
-        afterDatasetsDraw(chart) {
-          const meta = chart.getDatasetMeta(0);
-          const last = meta.data[meta.data.length - 1];
-          if (!last) return;
+      /* --- Chart State --- */
+      const PAD = { top: 24, right: 20, bottom: 28, left: 20 };
+      const MAX_POINTS = 7;
+      /* Initial data — visible hills and valleys with upward trend */
+      let chartData = [12, 28, 18, 34, 22, 38, 30];
+      let targetData = chartData.slice();
+      let animData = chartData.slice();
+      let drawProgress = prefersReduced ? 1 : 0; /* 0→1 on load: self-draw */
+      let globalTime = 0;
+      let activityLevel = 0; /* 0=calm, 1=active, 2=urgent, 3=panic */
 
-          const ctx = chart.ctx;
-          const x = last.x, y = last.y;
-          const t = Date.now() / 1000;
-          const pulse = 1 + 0.25 * Math.sin(t * 2);
-          const alpha = 0.12 + 0.08 * Math.sin(t * 2);
+      /* --- Hover State --- */
+      let hoverIdx = -1; /* -1 = no hover */
+      const tooltip = document.getElementById("chart-tooltip");
+      const timeLabels = ["12m", "10m", "8m", "6m", "4m", "2m", "Now"];
 
-          ctx.save();
+      /* --- Particles --- */
+      let particles = [];
+      const MAX_PARTICLES = prefersReduced ? 0 : 40;
 
-          /* Outer glow */
-          ctx.beginPath();
-          ctx.arc(x, y, 9 * pulse, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(245,130,31,${alpha})`;
-          ctx.fill();
-
-          /* Middle */
-          ctx.beginPath();
-          ctx.arc(x, y, 5, 0, Math.PI * 2);
-          ctx.fillStyle = "rgba(245,130,31,0.15)";
-          ctx.fill();
-
-          /* Inner dot */
-          ctx.beginPath();
-          ctx.arc(x, y, 3, 0, Math.PI * 2);
-          ctx.fillStyle = "#f5821f";
-          ctx.strokeStyle = "#fff";
-          ctx.lineWidth = 1.5;
-          ctx.fill();
-          ctx.stroke();
-          ctx.restore();
+      function spawnParticle(x, y, burst) {
+        if (prefersReduced) return;
+        const count = burst ? ~~(Math.random() * 3) + 2 : 1;
+        for (let i = 0; i < count && particles.length < MAX_PARTICLES; i++) {
+          particles.push({
+            x: x + (Math.random() - 0.5) * 6,
+            y: y,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: -(Math.random() * 0.8 + 0.2),
+            life: 1.0,
+            decay: 0.006 + Math.random() * 0.008,
+            size: Math.random() * 2 + 1,
+            hue: Math.random() > 0.3 ? 0 : 1 /* 0=orange, 1=amber */
+          });
         }
-      };
-
-      const chart = new Chart(cx, {
-        type: "line",
-        data: {
-          labels: ["10m", "8m", "6m", "4m", "2m", "Now"],
-          datasets: [{
-            label: "Purchases",
-            data: [14, 22, 17, 28, 24, 35],
-            borderColor: function(context) {
-              const c = context.chart;
-              const { ctx, chartArea } = c;
-              if (!chartArea) return "#f5821f";
-              const g = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
-              g.addColorStop(0, "rgba(245,130,31,0.4)");
-              g.addColorStop(0.6, "#f5821f");
-              g.addColorStop(1, "#ff5f15");
-              return g;
-            },
-            backgroundColor: function(context) {
-              const c = context.chart;
-              const { ctx, chartArea } = c;
-              if (!chartArea) return "rgba(245,130,31,0.05)";
-              return createGradient(ctx, chartArea);
-            },
-            borderWidth: 2.5,
-            pointBackgroundColor: "#fff",
-            pointBorderColor: "#f5821f",
-            pointBorderWidth: 1.5,
-            pointRadius: function(ctx) {
-              return ctx.dataIndex === ctx.dataset.data.length - 1 ? 0 : 2.5;
-            },
-            pointHoverRadius: 5,
-            pointHoverBackgroundColor: "#f5821f",
-            pointHoverBorderColor: "#fff",
-            pointHoverBorderWidth: 2,
-            fill: true,
-            tension: 0.4,
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          layout: { padding: { top: 4, right: 6, bottom: 0, left: 0 } },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: "rgba(18,18,18,0.9)",
-              titleFont: { family: "Poppins", size: 10, weight: "500" },
-              bodyFont: { family: "Poppins", size: 12, weight: "700" },
-              padding: { top: 8, right: 12, bottom: 8, left: 12 },
-              cornerRadius: 8,
-              displayColors: false,
-              borderColor: "rgba(245,130,31,0.2)",
-              borderWidth: 1,
-              callbacks: {
-                title: items => items[0].label + " ago",
-                label: c => c.parsed.y + " orders"
-              },
-            },
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              border: { display: false },
-              ticks: {
-                font: { family: "Poppins", size: 10, weight: "500" },
-                color: "#b0b0b0",
-                padding: 4
-              },
-            },
-            y: { display: false, suggestedMin: 0, suggestedMax: 50 },
-          },
-          animation: { duration: 600, easing: "easeOutQuart" },
-          interaction: { intersect: false, mode: "index" },
-        },
-        plugins: [glowPointPlugin]
-      });
-
-      requestAnimationFrame(() => {
-        chart.update();
-        animateGlow();
-      });
-
-      function animateGlow() {
-        chart.draw();
-        requestAnimationFrame(animateGlow);
       }
 
-      function pushChart() {
-        chart.data.datasets[0].data.shift();
-        chart.data.datasets[0].data.push(~~(Math.random() * 25) + 15);
-        chart.data.labels = ["10m", "8m", "6m", "4m", "2m", "Now"];
-        chart.update("default");
+      /* --- Ring Pulses (on data arrival) --- */
+      let rings = [];
 
-        const container = document.getElementById("chart-container");
+      function spawnRing(x, y) {
+        if (prefersReduced) return;
+        rings.push({
+          x: x, y: y,
+          radius: 4,
+          maxRadius: 28 + Math.random() * 8,
+          alpha: 0.4,
+          speed: 0.4 + Math.random() * 0.2
+        });
+      }
+
+      /* --- Ambient Dots (background depth) --- */
+      let ambientDots = [];
+      function initAmbientDots() {
+        if (prefersReduced) return;
+        for (let i = 0; i < 8; i++) {
+          ambientDots.push({
+            x: Math.random(),
+            y: Math.random(),
+            size: Math.random() * 1.5 + 0.5,
+            speed: Math.random() * 0.0003 + 0.0001,
+            phase: Math.random() * Math.PI * 2,
+            alpha: Math.random() * 0.15 + 0.03
+          });
+        }
+      }
+      initAmbientDots();
+
+      /* --- Floating Labels --- */
+      function spawnFloatLabel(value) {
+        const el = document.createElement("div");
+        el.className = "float-order";
+        el.textContent = "+" + value + " orders";
+        /* Position near right side of chart */
+        const plotW = W - PAD.left - PAD.right;
+        const plotH = H - PAD.top - PAD.bottom;
+        el.style.right = (PAD.right + 10 + Math.random() * 30) + "px";
+        el.style.top = (PAD.top + plotH * 0.2 + Math.random() * plotH * 0.3) + "px";
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 1900);
+      }
+
+      /* --- Color helpers --- */
+      function rgba(r, g, b, a) { return "rgba(" + r + "," + g + "," + b + "," + a + ")"; }
+
+      /* Activity-dependent colors */
+      function getLineColor(alpha) {
+        if (activityLevel >= 3) return rgba(232, 80, 10, alpha);  /* hot */
+        if (activityLevel >= 2) return rgba(240, 105, 20, alpha); /* warm-urgent */
+        return rgba(245, 130, 31, alpha); /* brand orange */
+      }
+
+      function getGlowIntensity() {
+        return [0.04, 0.07, 0.12, 0.18][activityLevel] || 0.04;
+      }
+
+      /* --- Coordinate helpers --- */
+      function getPlotArea() {
+        return {
+          x: PAD.left,
+          y: PAD.top,
+          w: W - PAD.left - PAD.right,
+          h: H - PAD.top - PAD.bottom
+        };
+      }
+
+      function dataToXY(data, idx) {
+        const p = getPlotArea();
+        const maxVal = Math.max(55, ...data) * 1.15;
+        const x = p.x + (idx / (data.length - 1)) * p.w;
+        const y = p.y + p.h - (data[idx] / maxVal) * p.h;
+        return { x: x, y: y };
+      }
+
+      /* --- Smooth bezier path through points --- */
+      function drawSmoothLine(data, progress) {
+        if (data.length < 2) return;
+
+        const points = [];
+        for (let i = 0; i < data.length; i++) {
+          points.push(dataToXY(data, i));
+        }
+
+        /* How many points to draw (based on progress 0-1) */
+        const visibleCount = Math.max(2, Math.ceil(points.length * progress));
+        const visPoints = points.slice(0, visibleCount);
+
+        /* Partial last segment */
+        const segProgress = (points.length * progress) - (visibleCount - 1);
+
+        ctx.beginPath();
+        ctx.moveTo(visPoints[0].x, visPoints[0].y);
+
+        for (let i = 0; i < visPoints.length - 1; i++) {
+          const p0 = visPoints[Math.max(0, i - 1)];
+          const p1 = visPoints[i];
+          const p2 = visPoints[i + 1];
+          const p3 = visPoints[Math.min(visPoints.length - 1, i + 2)];
+
+          const tension = 0.22;
+          const cp1x = p1.x + (p2.x - p0.x) * tension;
+          const cp1y = p1.y + (p2.y - p0.y) * tension;
+          const cp2x = p2.x - (p3.x - p1.x) * tension;
+          const cp2y = p2.y - (p3.y - p1.y) * tension;
+
+          /* If this is the last segment and we need partial drawing */
+          if (i === visPoints.length - 2 && progress < 1) {
+            const t = Math.min(1, segProgress);
+            /* De Casteljau for partial bezier */
+            const tx = bezierPoint(p1.x, cp1x, cp2x, p2.x, t);
+            const ty = bezierPoint(p1.y, cp1y, cp2y, p2.y, t);
+            ctx.bezierCurveTo(
+              lerp(p1.x, cp1x, t), lerp(p1.y, cp1y, t),
+              bezierPoint(p1.x, cp1x, cp2x, p2.x, t * 0.8),
+              bezierPoint(p1.y, cp1y, cp2y, p2.y, t * 0.8),
+              tx, ty
+            );
+          } else {
+            ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+          }
+        }
+
+        return visPoints;
+      }
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+      function bezierPoint(p0, p1, p2, p3, t) {
+        const t2 = t * t;
+        const t3 = t2 * t;
+        const mt = 1 - t;
+        const mt2 = mt * mt;
+        const mt3 = mt2 * mt;
+        return mt3 * p0 + 3 * mt2 * t * p1 + 3 * mt * t2 * p2 + t3 * p3;
+      }
+
+      /* ---- RENDER LAYERS ---- */
+
+      function drawGrid() {
+        const p = getPlotArea();
+        ctx.save();
+
+        /* Subtle horizontal grid lines */
+        ctx.strokeStyle = rgba(0, 0, 0, 0.025);
+        ctx.lineWidth = 0.5;
+        const gridLines = 4;
+        for (let i = 0; i <= gridLines; i++) {
+          const y = p.y + (p.h / gridLines) * i;
+          ctx.beginPath();
+          ctx.moveTo(p.x, y);
+          ctx.lineTo(p.x + p.w, y);
+          ctx.stroke();
+        }
+
+        /* Dot pattern (subtle) */
+        ctx.fillStyle = rgba(0, 0, 0, 0.018);
+        const dotSpacing = 30;
+        for (let x = p.x; x <= p.x + p.w; x += dotSpacing) {
+          for (let y = p.y; y <= p.y + p.h; y += dotSpacing) {
+            ctx.beginPath();
+            ctx.arc(x, y, 0.6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        ctx.restore();
+      }
+
+      function drawAmbientDots() {
+        if (prefersReduced) return;
+        const p = getPlotArea();
+        ctx.save();
+        for (const d of ambientDots) {
+          const wobble = Math.sin(globalTime * d.speed * 1000 + d.phase);
+          const x = p.x + d.x * p.w;
+          const y = p.y + d.y * p.h + wobble * 8;
+          const alpha = d.alpha * (0.7 + 0.3 * Math.sin(globalTime * 0.001 + d.phase));
+          ctx.beginPath();
+          ctx.arc(x, y, d.size, 0, Math.PI * 2);
+          ctx.fillStyle = rgba(245, 130, 31, alpha);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function drawFillGradient(data, progress) {
+        if (data.length < 2) return;
+        const p = getPlotArea();
+
+        ctx.save();
+        drawSmoothLine(data, progress);
+
+        /* Close the path down to the bottom */
+        const lastIdx = Math.min(data.length - 1, Math.ceil((data.length - 1) * progress));
+        const lastPt = dataToXY(data, lastIdx);
+        const firstPt = dataToXY(data, 0);
+        ctx.lineTo(lastPt.x, p.y + p.h);
+        ctx.lineTo(firstPt.x, p.y + p.h);
+        ctx.closePath();
+
+        /* Breathing gradient */
+        const breathe = prefersReduced ? 0.5 : 0.5 + 0.15 * Math.sin(globalTime * 0.0008);
+        const intensity = getGlowIntensity();
+        const grad = ctx.createLinearGradient(0, p.y, 0, p.y + p.h);
+        grad.addColorStop(0, rgba(245, 130, 31, intensity * breathe * 1.8));
+        grad.addColorStop(0.3, rgba(245, 130, 31, intensity * breathe));
+        grad.addColorStop(0.7, rgba(245, 130, 31, intensity * breathe * 0.3));
+        grad.addColorStop(1, rgba(245, 130, 31, 0));
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawLine(data, progress) {
+        ctx.save();
+        const visPoints = drawSmoothLine(data, progress);
+
+        /* Line stroke with gradient */
+        const p = getPlotArea();
+        const grad = ctx.createLinearGradient(p.x, 0, p.x + p.w * progress, 0);
+        grad.addColorStop(0, rgba(245, 130, 31, 0.35));
+        grad.addColorStop(0.3, getLineColor(0.75));
+        grad.addColorStop(1, getLineColor(1));
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        /* Soft glow under the line */
+        if (!prefersReduced) {
+          ctx.shadowColor = rgba(245, 130, 31, 0.3);
+          ctx.shadowBlur = 12;
+        }
+        ctx.stroke();
+
+        /* Second pass: sharper core line on top (no shadow) for crispness */
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 2.2;
+        ctx.globalAlpha = 0.6;
+        drawSmoothLine(data, progress);
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 0.5;
+        ctx.globalAlpha = 0.15;
+        ctx.stroke();
+
+        ctx.restore();
+
+        return visPoints;
+      }
+
+      function drawDataPoints(data, progress) {
+        const visibleCount = Math.max(2, Math.ceil(data.length * progress));
+        ctx.save();
+
+        for (let i = 0; i < visibleCount; i++) {
+          const pt = dataToXY(data, i);
+          const isLast = i === visibleCount - 1 && progress >= 1;
+
+          if (isLast && !prefersReduced) {
+            /* Animated glowing last point */
+            const pulse = 1 + 0.25 * Math.sin(globalTime * 0.003);
+            const alpha = 0.1 + 0.06 * Math.sin(globalTime * 0.003);
+
+            /* Outer glow ring */
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 14 * pulse, 0, Math.PI * 2);
+            ctx.fillStyle = rgba(245, 130, 31, alpha * 0.3);
+            ctx.fill();
+
+            /* Middle glow */
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 8 * pulse, 0, Math.PI * 2);
+            ctx.fillStyle = rgba(245, 130, 31, alpha * 0.7);
+            ctx.fill();
+
+            /* Core dot */
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = "#f5821f";
+            ctx.fill();
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+          /* No dots on intermediate points — cleaner look */
+        }
+        ctx.restore();
+      }
+
+      function drawRings() {
+        if (prefersReduced) return;
+        ctx.save();
+        for (let i = rings.length - 1; i >= 0; i--) {
+          const r = rings[i];
+          r.radius += r.speed;
+          r.alpha *= 0.96;
+          if (r.alpha < 0.01 || r.radius > r.maxRadius) {
+            rings.splice(i, 1);
+            continue;
+          }
+          ctx.beginPath();
+          ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+          ctx.strokeStyle = rgba(245, 130, 31, r.alpha);
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawParticles() {
+        if (prefersReduced) return;
+        ctx.save();
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy *= 0.99;
+          p.life -= p.decay;
+          if (p.life <= 0) { particles.splice(i, 1); continue; }
+
+          const alpha = p.life * 0.7;
+          const color = p.hue === 0
+            ? rgba(245, 130, 31, alpha)
+            : rgba(194, 98, 14, alpha);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function drawHover(data) {
+        if (hoverIdx < 0 || hoverIdx >= data.length) return;
+        const pt = dataToXY(data, hoverIdx);
+        const p = getPlotArea();
+        ctx.save();
+
+        /* Vertical crosshair line */
+        ctx.beginPath();
+        ctx.moveTo(pt.x, p.y);
+        ctx.lineTo(pt.x, p.y + p.h);
+        ctx.strokeStyle = rgba(245, 130, 31, 0.15);
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        /* Highlight dot */
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = rgba(245, 130, 31, 0.15);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = "#f5821f";
+        ctx.fill();
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.restore();
+
+        /* Position tooltip */
+        const val = Math.round(data[hoverIdx]);
+        const label = hoverIdx < timeLabels.length ? timeLabels[hoverIdx] : "";
+        const labelText = label === "Now" ? "Just now" : label + " ago";
+        tooltip.innerHTML = '<div class="tt-label">' + labelText + '</div><div class="tt-value">' + val + ' orders</div>';
+        tooltip.classList.add("visible");
+
+        /* Place tooltip — above the point, nudge left/right to stay in bounds */
+        const ttW = tooltip.offsetWidth;
+        const ttH = tooltip.offsetHeight;
+        let tx = pt.x - ttW / 2;
+        let ty = pt.y - ttH - 14;
+        /* Keep within chart bounds */
+        if (tx < 4) tx = 4;
+        if (tx + ttW > W - 4) tx = W - ttW - 4;
+        if (ty < 4) ty = pt.y + 16; /* flip below if too high */
+        tooltip.style.left = tx + "px";
+        tooltip.style.top = ty + "px";
+      }
+
+      function drawLabels(data) {
+        const p = getPlotArea();
+        ctx.save();
+        ctx.font = "500 10px Poppins, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillStyle = rgba(160, 155, 145, 0.9);
+
+        const timeLabels = ["12m", "10m", "8m", "6m", "4m", "2m", "Now"];
+        /* One label per data point (7 points = 7 labels) */
+        for (let i = 0; i < data.length && i < timeLabels.length; i++) {
+          const pt = dataToXY(data, i);
+          ctx.fillText(timeLabels[i], pt.x, p.y + p.h + 18);
+        }
+        ctx.restore();
+      }
+
+      /* Scan line effect */
+      let scanX = -50;
+      function drawScanLine() {
+        if (prefersReduced) return;
+        const p = getPlotArea();
+        scanX += 0.4;
+        if (scanX > p.w + 50) scanX = -50;
+
+        const x = p.x + scanX;
+        const grad = ctx.createLinearGradient(x - 20, 0, x + 20, 0);
+        grad.addColorStop(0, rgba(245, 130, 31, 0));
+        grad.addColorStop(0.5, rgba(245, 130, 31, 0.04));
+        grad.addColorStop(1, rgba(245, 130, 31, 0));
+        ctx.save();
+        ctx.fillStyle = grad;
+        ctx.fillRect(x - 20, p.y, 40, p.h);
+        ctx.restore();
+      }
+
+      /* --- Main Render Loop --- */
+      let lastFrame = 0;
+      let introAnimStarted = false;
+
+      function render(timestamp) {
+        if (!lastFrame) lastFrame = timestamp;
+        const delta = timestamp - lastFrame;
+        lastFrame = timestamp;
+        globalTime = timestamp;
+
+        /* Intro: self-drawing line animation */
+        if (drawProgress < 1 && !prefersReduced) {
+          drawProgress = Math.min(1, drawProgress + delta * 0.0006);
+        }
+
+        /* Smooth interpolation of data values — use ease-out for organic feel */
+        for (let i = 0; i < animData.length; i++) {
+          const diff = targetData[i] - animData[i];
+          animData[i] += diff * 0.05; /* slower = smoother transitions */
+        }
+
+        /* Update activity level from stock sim phase */
+        if (typeof st !== "undefined") {
+          if (st.r > 100) activityLevel = 0;
+          else if (st.r > 50) activityLevel = 1;
+          else if (st.r > 30) activityLevel = 2;
+          else activityLevel = 3;
+        }
+
+        /* Update intensity bar */
+        if (activityLevel >= 2) {
+          intensityBar.classList.add("active");
+        } else {
+          intensityBar.classList.remove("active");
+        }
+
+        /* Clear */
+        ctx.clearRect(0, 0, W, H);
+
+        /* Render layers (back to front) */
+        drawGrid();
+        drawAmbientDots();
+        drawScanLine();
+        drawFillGradient(animData, drawProgress);
+        drawLine(animData, drawProgress);
+        drawDataPoints(animData, drawProgress);
+        drawRings();
+        drawParticles();
+        if (drawProgress >= 1) drawLabels(animData);
+        drawHover(animData);
+
+        /* Spawn ambient particles along the line occasionally — very sparse */
+        if (!prefersReduced && Math.random() < 0.015 + activityLevel * 0.01) {
+          const idx = ~~(Math.random() * animData.length);
+          const pt = dataToXY(animData, idx);
+          spawnParticle(pt.x, pt.y, false);
+        }
+
+        requestAnimationFrame(render);
+      }
+
+      requestAnimationFrame(render);
+
+      /* --- Mouse / Touch Hover Interaction --- */
+      function getHoverIndex(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const mx = clientX - rect.left;
+        const my = clientY - rect.top;
+        const p = getPlotArea();
+
+        /* Check if mouse is within plot area (with some padding) */
+        if (my < p.y - 10 || my > p.y + p.h + 10) return -1;
+        if (mx < p.x - 10 || mx > p.x + p.w + 10) return -1;
+
+        /* Find nearest data point by x distance */
+        let bestIdx = -1;
+        let bestDist = Infinity;
+        for (let i = 0; i < animData.length; i++) {
+          const pt = dataToXY(animData, i);
+          const dx = Math.abs(pt.x - mx);
+          if (dx < bestDist) {
+            bestDist = dx;
+            bestIdx = i;
+          }
+        }
+        /* Only snap if within reasonable distance */
+        return bestDist < (W / animData.length) ? bestIdx : -1;
+      }
+
+      canvas.addEventListener("mousemove", function (e) {
+        hoverIdx = getHoverIndex(e.clientX, e.clientY);
+        canvas.style.cursor = hoverIdx >= 0 ? "crosshair" : "default";
+        if (hoverIdx < 0) tooltip.classList.remove("visible");
+      });
+
+      canvas.addEventListener("mouseleave", function () {
+        hoverIdx = -1;
+        tooltip.classList.remove("visible");
+        canvas.style.cursor = "default";
+      });
+
+      /* Touch support */
+      canvas.addEventListener("touchstart", function (e) {
+        const t = e.touches[0];
+        hoverIdx = getHoverIndex(t.clientX, t.clientY);
+      }, { passive: true });
+
+      canvas.addEventListener("touchmove", function (e) {
+        const t = e.touches[0];
+        hoverIdx = getHoverIndex(t.clientX, t.clientY);
+        if (hoverIdx < 0) tooltip.classList.remove("visible");
+      }, { passive: true });
+
+      canvas.addEventListener("touchend", function () {
+        /* Keep tooltip visible briefly then hide */
+        setTimeout(function () {
+          hoverIdx = -1;
+          tooltip.classList.remove("visible");
+        }, 1500);
+      });
+
+      /* --- pushChart interface (called by stock sim) --- */
+      function pushChart(burstAmount) {
+        /* Shift data left, add new point */
+        targetData.shift();
+        animData.shift();
+
+        /* Generate new value — visible variance but not jagged */
+        const lastVal = targetData[targetData.length - 1] || 25;
+        const maxDelta = 10 + activityLevel * 3;
+        const delta = (Math.random() - 0.35) * maxDelta; /* slight upward bias */
+        const newVal = Math.max(8, Math.min(48, Math.round(lastVal + delta)));
+        targetData.push(newVal);
+        animData.push(animData[animData.length - 1] || newVal);
+
+        chartData = targetData.slice();
+
+        /* Visual effects on the new point */
+        const lastPt = dataToXY(targetData, targetData.length - 1);
+        spawnRing(lastPt.x, lastPt.y);
+        spawnParticle(lastPt.x, lastPt.y, true);
+
+        /* Flash container */
         container.classList.remove("flash");
         void container.offsetWidth;
         container.classList.add("flash");
+
+        /* Floating label on bursts */
+        if (burstAmount && burstAmount > 1) {
+          spawnFloatLabel(burstAmount);
+        } else if (Math.random() < 0.3) {
+          spawnFloatLabel(~~(Math.random() * 3) + 1);
+        }
       }
 
       /* ==================================
