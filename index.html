@@ -4,873 +4,1016 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Obesity Killer - Live Flash Sale</title>
+
+    <!--
+    ============================================================
+    IMPLEMENTATION DOCUMENT
+    ============================================================
+
+    1. OBJECTIVE
+       Build a sales countdown banner with a live analytics chart
+       that creates purchase urgency during a limited-time sale.
+       The banner visually aligns with theobesitykiller.com while
+       pushing a modern, premium aesthetic.
+
+    2. DESIGN DIRECTION
+       "Modern Editorial" - dark surfaces, glass-morphism cards,
+       bold type contrasts, warm orange accents on dark ground.
+       High contrast. Generous whitespace. Intentional motion.
+
+    3. DESIGN SYSTEM
+       - Font:       DM Sans 400/500/700 (modern geometric sans)
+       - Primary:    #f5821f (brand orange)
+       - Surfaces:   #0f0f0f (deep), #1a1a1a (card), #242424 (elevated)
+       - Glass:      rgba(255,255,255,0.04) with backdrop-blur
+       - Text:       #ffffff, #a0a0a0 (muted), #666 (disabled)
+       - Accent:     #ff6b3a (warm), #ef4444 (urgency red)
+       - Radius:     12px (cards), 8px (elements), 20px (pills)
+       - Spacing:    4px base scale
+       - Shadows:    layered dark shadows + orange glow on focus
+
+    4. INFORMATION HIERARCHY
+       Brand trust -> Offer headline -> Coupon -> Timer -> Stock
+       Right panel: Chart + Social proof
+
+    5. STOCK SIMULATION
+       Non-linear: Poisson-inspired intervals, burst drops (12%),
+       3-tier speed (calm/moderate/panic), localStorage persistent.
+
+    6. RESPONSIVE
+       Desktop grid -> Tablet/Mobile single column stack.
+       Fluid type scaling. Touch-friendly tap targets.
+
+    ============================================================
+    -->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&family=JetBrains+Mono:wght@600&display=swap"
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
       :root {
-        --primary-maroon: #4a1212;
-        --primary-orange: #ff6b00;
-        --secondary-orange: #ff8c00;
-        --text-dark: #333333;
-        --text-light: #ffffff;
-        --bg-light: #fdfdfd;
-        --shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-        --border-radius: 16px;
+        --orange: #f5821f;
+        --orange-bright: #ff9a44;
+        --orange-dim: rgba(245, 130, 31, 0.12);
+        --orange-glow: rgba(245, 130, 31, 0.25);
+
+        --surface-0: #0a0a0a;
+        --surface-1: #111111;
+        --surface-2: #1a1a1a;
+        --surface-3: #242424;
+        --surface-glass: rgba(255, 255, 255, 0.035);
+        --surface-glass-border: rgba(255, 255, 255, 0.06);
+
+        --text-0: #ffffff;
+        --text-1: #e0e0e0;
+        --text-2: #a0a0a0;
+        --text-3: #666666;
+
+        --red: #ef4444;
+        --red-dim: rgba(239, 68, 68, 0.12);
+        --green: #22c55e;
+        --green-dim: rgba(34, 197, 94, 0.12);
+
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --radius-full: 9999px;
+
+        --ease: cubic-bezier(0.16, 1, 0.3, 1);
+        --ease-out: cubic-bezier(0, 0, 0.2, 1);
       }
 
-      * {
+      *,
+      *::before,
+      *::after {
         box-sizing: border-box;
         margin: 0;
         padding: 0;
       }
 
+      /* Disable tap highlight on mobile */
+      button, a {
+        -webkit-tap-highlight-color: transparent;
+      }
+
       body {
-        font-family: "Poppins", sans-serif;
-        background-color: #f4f6f8;
+        font-family: "DM Sans", sans-serif;
+        background: var(--surface-0);
+        color: var(--text-1);
+        min-height: 100vh;
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 100vh;
-        padding: 20px;
+        padding: 24px;
+        padding: 24px max(24px, env(safe-area-inset-right)) 24px max(24px, env(safe-area-inset-left));
+        -webkit-font-smoothing: antialiased;
       }
 
-      /* --- Main Container --- */
-      .promo-widget {
-        width: 100%;
-        max-width: 950px;
-        background: #fff;
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow);
-        overflow: hidden;
-        display: grid;
-        grid-template-columns: 1.25fr 1fr; /* Split between text/timer and chart */
-        border: 1px solid rgba(0, 0, 0, 0.04);
+      /* Subtle background texture */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245, 130, 31, 0.06), transparent),
+          radial-gradient(ellipse 60% 50% at 80% 100%, rgba(245, 130, 31, 0.03), transparent);
+        pointer-events: none;
+        z-index: 0;
       }
 
-      /* --- Left Side: Sales Content --- */
-      .promo-content {
-        padding: 35px 40px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+      /* ================================
+         WIDGET SHELL
+         ================================ */
+      .widget {
         position: relative;
         z-index: 1;
+        width: 100%;
+        max-width: 980px;
+        display: grid;
+        grid-template-columns: 1.15fr 1fr;
+        background: var(--surface-1);
+        border: 1px solid var(--surface-glass-border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow:
+          0 0 0 1px rgba(255,255,255,0.02),
+          0 20px 60px rgba(0,0,0,0.5),
+          0 0 80px rgba(245,130,31,0.04);
+        animation: widgetIn 0.7s var(--ease) both;
       }
 
-      /* Background accent for the left side */
-      .promo-content::before {
+      @keyframes widgetIn {
+        from { opacity: 0; transform: translateY(20px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      /* ================================
+         LEFT PANEL: OFFER
+         ================================ */
+      .panel-offer {
+        padding: 36px 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        position: relative;
+      }
+
+      /* Top accent line */
+      .panel-offer::before {
         content: "";
         position: absolute;
         top: 0;
         left: 0;
-        width: 6px;
-        height: 100%;
-        background: linear-gradient(
-          to bottom,
-          var(--primary-maroon),
-          var(--primary-orange)
-        );
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, var(--orange), var(--orange-bright), transparent 80%);
       }
 
-      /* --- Logo Integration --- */
-      .site-logo {
+      /* --- Brand --- */
+      .brand {
         display: flex;
         align-items: center;
-        gap: 12px;
-        margin-bottom: 25px;
-        padding-bottom: 20px;
-        border-bottom: 1px solid #f0f0f0;
+        gap: 14px;
       }
 
-      @media (max-width: 480px) {
-        .logo-icon {
-          width: 70px;
-        }
-      }
-
-      .logo-icon {
-        width: 100px;
-        height: auto;
+      .brand-logo {
+        width: 56px;
+        height: 56px;
         object-fit: contain;
+        border-radius: var(--radius-sm);
+        background: rgba(255, 255, 255, 0.92);
+        padding: 6px;
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.1),
+          0 2px 8px rgba(0, 0, 0, 0.3),
+          0 0 20px rgba(245, 130, 31, 0.08);
       }
 
-      .logo-text {
+      .brand-text {
         display: flex;
         flex-direction: column;
-        line-height: 1.1;
+        gap: 2px;
       }
 
-      .logo-text strong {
-        color: var(--primary-maroon);
-        font-size: 1.05rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+      .brand-name {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-0);
+        letter-spacing: -0.01em;
       }
 
-      .logo-text span {
-        color: #2e7d32; /* Deep green to match the screenshot's subtext vibe */
+      .brand-sub {
         font-size: 0.65rem;
-        font-weight: 700;
+        font-weight: 500;
+        color: var(--orange);
         text-transform: uppercase;
-        letter-spacing: 1.5px;
+        letter-spacing: 1.2px;
       }
 
-      /* --- Content Styling --- */
-      .brand-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.8rem;
-        color: var(--primary-maroon);
-        font-weight: 600;
-        margin-bottom: 15px;
-        background: #fff0e6;
-        padding: 6px 14px;
-        border-radius: 20px;
-        width: fit-content;
-      }
-
-      .brand-badge span {
-        color: #ffd700; /* Gold star */
-      }
-
-      h1 {
-        font-size: 2rem;
-        color: var(--text-dark);
-        line-height: 1.2;
-        margin-bottom: 10px;
-      }
-
-      h1 span {
-        color: var(--primary-orange);
-      }
-
-      .slogan {
-        color: #666;
-        font-size: 0.95rem;
-        margin-bottom: 25px;
-        font-weight: 400;
-      }
-
-      /* Coupon Code Box */
-      .coupon-box {
-        background: #fafafa;
-        border: 2px dashed var(--primary-maroon);
-        padding: 12px 20px;
-        border-radius: 8px;
+      /* --- Offer Card --- */
+      .offer-card {
+        background: linear-gradient(135deg, var(--orange), #e86a10);
+        border-radius: var(--radius-md);
+        padding: 20px 24px;
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        margin-bottom: 25px;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-
-      .coupon-box:hover {
-        background: #fff5f5;
-        transform: translateY(-2px);
-      }
-
-      .coupon-code {
-        font-weight: 700;
-        color: var(--primary-maroon);
-        font-size: 1.15rem;
-        letter-spacing: 1px;
-      }
-
-      .copy-btn {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: #fff;
-        background-color: var(--primary-orange);
-        padding: 5px 12px;
-        border-radius: 4px;
-        text-transform: uppercase;
-        transition: background 0.3s;
-      }
-
-      .coupon-box:hover .copy-btn {
-        background-color: var(--primary-maroon);
-      }
-
-      /* Timer Layout */
-      .timer-container {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 25px;
-      }
-
-      .time-box {
-        text-align: center;
-        flex: 1;
-      }
-
-      .time-value {
-        background: var(--primary-maroon);
-        color: white;
-        font-size: 1.5rem;
-        font-weight: 700;
-        padding: 12px 0;
-        border-radius: 8px;
-        display: block;
-        box-shadow: 0 4px 12px rgba(74, 18, 18, 0.2);
+        gap: 16px;
         position: relative;
         overflow: hidden;
       }
 
-      /* Add a glass reflection to timer boxes */
-      .time-value::after {
+      /* Decorative circle */
+      .offer-card::after {
+        content: "";
+        position: absolute;
+        right: -20px;
+        top: -20px;
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.08);
+        pointer-events: none;
+      }
+
+      .offer-icon {
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: var(--radius-sm);
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        backdrop-filter: blur(4px);
+      }
+
+      .offer-icon svg {
+        width: 20px;
+        height: 20px;
+        color: #fff;
+      }
+
+      .offer-details {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .offer-headline {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.3;
+        letter-spacing: -0.01em;
+      }
+
+      .offer-subline {
+        font-size: 0.72rem;
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 400;
+      }
+
+      /* --- Coupon --- */
+      .coupon {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--surface-glass);
+        border: 1px dashed rgba(245, 130, 31, 0.3);
+        border-radius: var(--radius-md);
+        padding: 14px 18px;
+        transition: all 0.25s var(--ease);
+      }
+
+      .coupon:hover {
+        border-color: var(--orange);
+        background: var(--orange-dim);
+        box-shadow: 0 0 20px var(--orange-glow);
+      }
+
+      .coupon-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .coupon-label {
+        font-size: 0.65rem;
+        font-weight: 500;
+        color: var(--text-2);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+      }
+
+      .coupon-code {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--orange-bright);
+        letter-spacing: 1.5px;
+      }
+
+      .coupon-btn {
+        border: none;
+        background: var(--orange);
+        color: #fff;
+        font-family: "DM Sans", sans-serif;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        padding: 10px 18px;
+        min-height: 44px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.2s var(--ease);
+        white-space: nowrap;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .coupon-btn:hover {
+        background: #e0740f;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px var(--orange-glow);
+      }
+
+      .coupon-btn:active {
+        transform: scale(0.97) translateY(0);
+      }
+
+      .coupon-btn.copied {
+        background: var(--green);
+      }
+
+      /* --- Timer --- */
+      .timer {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .timer-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .timer-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--text-2);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+      }
+
+      .badge-live {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.6rem;
+        font-weight: 700;
+        color: var(--red);
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        background: var(--red-dim);
+        padding: 4px 12px;
+        border-radius: var(--radius-full);
+      }
+
+      .dot-pulse {
+        width: 6px;
+        height: 6px;
+        background: var(--red);
+        border-radius: 50%;
+        animation: dotPulse 1.6s ease-in-out infinite;
+      }
+
+      @keyframes dotPulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.3; transform: scale(1.5); }
+      }
+
+      .timer-slots {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+
+      .slot {
+        text-align: center;
+      }
+
+      .slot-val {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 56px;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text-0);
+        background: var(--surface-2);
+        border: 1px solid var(--surface-glass-border);
+        border-radius: var(--radius-sm);
+        position: relative;
+        overflow: hidden;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+      }
+
+      /* Horizontal split line */
+      .slot-val::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.04);
+        pointer-events: none;
+      }
+
+      /* Top highlight */
+      .slot-val::after {
         content: "";
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 50%;
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.02);
+        pointer-events: none;
       }
 
-      .time-label {
-        font-size: 0.75rem;
-        color: #777;
-        margin-top: 6px;
-        display: block;
-        text-transform: uppercase;
-        font-weight: 600;
-      }
-
-      /* Live Stock Counter */
-      .stock-indicator {
-        margin-top: auto;
-        font-size: 1.25rem;
-        color: var(--text-dark);
+      .slot-lbl {
+        font-size: 0.6rem;
         font-weight: 500;
-        background: #fff9f5;
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid #ffe0cc;
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 6px;
       }
 
-      .stock-bar-bg {
+      /* Colon separators */
+      .timer-slots .slot:not(:last-child) .slot-val::after {
+        /* We'll use a different approach with pseudo */
+      }
+
+      /* --- Stock --- */
+      .stock {
+        background: var(--surface-glass);
+        border: 1px solid var(--surface-glass-border);
+        border-radius: var(--radius-md);
+        padding: 16px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .stock-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .stock-urgency {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--red);
+      }
+
+      .stock-urgency svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .stock-num {
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: var(--text-2);
+      }
+
+      .stock-num strong {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--text-0);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .stock-track {
         width: 100%;
-        height: 8px;
-        background: #e0e0e0;
-        border-radius: 10px;
-        margin-top: 10px;
+        height: 4px;
+        background: var(--surface-3);
+        border-radius: var(--radius-full);
         overflow: hidden;
       }
 
-      .stock-bar-fill {
+      .stock-fill {
         height: 100%;
-        background: linear-gradient(90deg, var(--primary-orange), #ff4d4d);
-        width: 85%; /* Starting width */
-        border-radius: 10px;
-        transition:
-          width 1s ease-in-out,
-          background 0.5s ease;
+        border-radius: var(--radius-full);
+        background: linear-gradient(90deg, var(--orange), var(--orange-bright));
+        transition: width 0.8s var(--ease), background 0.5s var(--ease);
+        position: relative;
       }
 
-      .urgency-text {
-        width: 100%;
-        color: #d32f2f;
-        font-weight: 700;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+      .stock-fill::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        top: -1px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--orange-bright);
+        box-shadow: 0 0 8px var(--orange-glow);
       }
 
-      /* --- Right Side: Analytics Chart --- */
-      .analytics-panel {
-        background: #fafbfc;
-        padding: 35px 40px;
+      /* ================================
+         RIGHT PANEL: ANALYTICS
+         ================================ */
+      .panel-analytics {
+        background: var(--surface-2);
+        padding: 36px 28px;
         display: flex;
         flex-direction: column;
-        border-left: 1px solid #f0f0f0;
+        gap: 20px;
+        border-left: 1px solid rgba(255, 255, 255, 0.04);
       }
 
-      .chart-header {
+      .chart-head {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
+        justify-content: space-between;
       }
 
       .chart-title {
-        font-size: 1rem;
-        font-weight: 700;
-        color: #333;
         display: flex;
         align-items: center;
         gap: 8px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text-0);
       }
 
-      .live-dot {
-        width: 10px;
-        height: 10px;
-        background-color: #00c853;
+      .dot-green {
+        width: 7px;
+        height: 7px;
+        background: var(--green);
         border-radius: 50%;
-        box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7);
-        animation: livePulse 2s infinite;
+        animation: greenPulse 2s infinite;
       }
 
-      .chart-container {
+      @keyframes greenPulse {
+        0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+        70% { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+      }
+
+      .chart-pill {
+        font-size: 0.58rem;
+        font-weight: 700;
+        color: var(--green);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        background: var(--green-dim);
+        padding: 4px 12px;
+        border-radius: var(--radius-full);
+      }
+
+      .chart-area {
         position: relative;
-        height: 220px; /* Fixed height for the chart */
-        width: 100%;
-        margin-bottom: 20px;
+        flex: 1;
+        min-height: 0;
+        height: 200px;
       }
 
-      /* Footer inside chart panel */
-      .social-proof {
-        margin-top: auto;
-        padding-top: 25px;
-        border-top: 1px solid #e5e5e5;
+      /* --- Social Proof --- */
+      .proof {
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 14px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        margin-top: auto;
       }
 
-      .avatar-group {
+      .proof-avatars {
         display: flex;
+        flex-shrink: 0;
       }
 
-      .avatar {
-        width: 36px;
-        height: 36px;
+      .proof-avatars img {
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
-        border: 2px solid white;
-        background: #ddd;
-        margin-left: -12px;
+        border: 2px solid var(--surface-2);
         object-fit: cover;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        margin-left: -8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        transition: transform 0.2s var(--ease);
       }
-      .avatar:first-child {
+
+      .proof-avatars img:first-child {
         margin-left: 0;
       }
 
-      .proof-text {
-        font-size: 0.85rem;
-        color: #555;
-        line-height: 1.4;
+      .proof-avatars img:hover {
+        transform: translateY(-2px) scale(1.05);
+        z-index: 1;
       }
 
-      .proof-text b {
-        color: var(--text-dark);
+      .proof-copy {
+        font-size: 0.78rem;
+        color: var(--text-2);
+        line-height: 1.45;
       }
 
-      /* --- Animations --- */
-      @keyframes livePulse {
-        0% {
-          transform: scale(0.95);
-          box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7);
-        }
-        70% {
-          transform: scale(1);
-          box-shadow: 0 0 0 6px rgba(0, 200, 83, 0);
-        }
-        100% {
-          transform: scale(0.95);
-          box-shadow: 0 0 0 0 rgba(0, 200, 83, 0);
+      .proof-copy strong {
+        color: var(--text-0);
+        font-weight: 700;
+      }
+
+      /* ================================
+         STAGGERED ENTRANCE
+         ================================ */
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .panel-offer > * {
+        animation: fadeUp 0.5s var(--ease) both;
+      }
+      .panel-offer > *:nth-child(1) { animation-delay: 0.06s; }
+      .panel-offer > *:nth-child(2) { animation-delay: 0.12s; }
+      .panel-offer > *:nth-child(3) { animation-delay: 0.18s; }
+      .panel-offer > *:nth-child(4) { animation-delay: 0.24s; }
+      .panel-offer > *:nth-child(5) { animation-delay: 0.30s; }
+
+      .panel-analytics > * {
+        animation: fadeUp 0.5s var(--ease) both;
+      }
+      .panel-analytics > *:nth-child(1) { animation-delay: 0.18s; }
+      .panel-analytics > *:nth-child(2) { animation-delay: 0.24s; }
+      .panel-analytics > *:nth-child(3) { animation-delay: 0.30s; }
+
+      /* ================================
+         REDUCED MOTION
+         ================================ */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
         }
       }
 
-      /* --- Responsive Design --- */
+      /* ================================
+         TABLET (< 850px)
+         ================================ */
       @media (max-width: 850px) {
-        .promo-widget {
+        .widget {
           display: flex;
           flex-direction: column;
-          max-width: 500px;
-          /* Reset grid properties */
-          grid-template-columns: unset;
-        }
-        /* ensure child elements don't force width */
-        .promo-content,
-        .analytics-panel {
-          width: 100%;
-          min-width: 0;
+          max-width: 520px;
         }
 
-        .promo-content::before {
+        .panel-offer,
+        .panel-analytics {
           width: 100%;
-          height: 6px;
-          top: 0;
-          left: 0;
-          background: linear-gradient(
-            to right,
-            var(--primary-maroon),
-            var(--primary-orange)
-          );
         }
-        .analytics-panel {
+
+        .panel-analytics {
           border-left: none;
-          border-top: 1px solid #eee;
+          border-top: 1px solid rgba(255, 255, 255, 0.04);
         }
       }
 
-      /* --- Mobile Responsive (340px - 480px) --- */
+      /* ================================
+         MOBILE (< 480px)
+         ================================ */
       @media (max-width: 480px) {
-        body {
-          padding: 10px;
-          align-items: flex-start;
-        }
+        body { padding: 12px; align-items: flex-start; }
 
-        .promo-widget {
-          border-radius: 12px;
+        .widget {
+          border-radius: var(--radius-md);
           max-width: 100%;
         }
 
-        /* Reduce padding for mobile */
-        .promo-content {
-          padding: 20px 12px;
+        .panel-offer {
+          padding: 24px 18px;
+          gap: 18px;
         }
 
-        .analytics-panel {
-          padding: 20px 12px;
+        .panel-analytics {
+          padding: 24px 18px;
         }
 
-        /* Logo adjustments */
-        .site-logo {
-          margin-bottom: 18px;
-          padding-bottom: 15px;
-          gap: 10px;
-        }
+        .brand-logo { width: 44px; height: 44px; }
+        .brand-name { font-size: 0.82rem; }
+        .brand-sub { font-size: 0.58rem; }
 
-        .logo-text strong {
-          font-size: 0.95rem;
-        }
+        .offer-card { padding: 16px 18px; }
+        .offer-icon { width: 36px; height: 36px; }
+        .offer-icon svg { width: 16px; height: 16px; }
+        .offer-headline { font-size: 0.92rem; }
+        .offer-subline { font-size: 0.65rem; }
 
-        .logo-text span {
-          font-size: 0.6rem;
-        }
-
-        /* Smaller badge for mobile */
-        .brand-badge {
-          font-size: 0.7rem;
-          padding: 5px 10px;
-          margin-bottom: 12px;
-        }
-
-        /* Heading adjustments */
-        h1 {
-          font-size: 1.5rem;
-          margin-bottom: 8px;
-        }
-
-        .slogan {
-          font-size: 0.85rem;
-          margin-bottom: 18px;
-        }
-
-        /* FIX: Coupon box for mobile - stack vertically to prevent line breaks */
-        .coupon-box {
+        .coupon {
           flex-direction: column;
-          padding: 15px;
-          gap: 10px;
           align-items: stretch;
-          margin-bottom: 20px;
+          gap: 10px;
+          padding: 14px;
         }
 
-        .coupon-code {
-          font-size: 1rem;
-          text-align: center;
-          word-break: break-all;
-        }
+        .coupon-info { align-items: center; }
+        .coupon-btn { width: 100%; text-align: center; padding: 12px 18px; min-height: 48px; font-size: 0.75rem; }
 
-        .copy-btn {
-          width: 100%;
-          text-align: center;
-          padding: 8px 12px;
-          font-size: 0.7rem;
-        }
+        .slot-val { height: 48px; font-size: 1.3rem; }
+        .slot-lbl { font-size: 0.55rem; }
 
-        /* Timer adjustments */
-        .timer-container {
-          gap: 8px;
-          margin-bottom: 20px;
-        }
+        .chart-area { height: 160px; }
+        .chart-title { font-size: 0.78rem; }
 
-        .time-value {
-          font-size: 1.2rem;
-          padding: 10px 0;
-          border-radius: 6px;
-        }
-
-        .time-label {
-          font-size: 0.65rem;
-          margin-top: 5px;
-        }
-
-        /* Stock indicator */
-        .stock-indicator {
-          font-size: 0.95rem; /* Reduced to fit better */
-          padding: 10px;
-        }
-
-        .urgency-text {
-          flex-direction: row; /* Force horizontal layout */
-          justify-content: space-between;
-          align-items: center;
-          gap: 5px;
-          font-size: 0.85rem; /* Slightly smaller to fit single line on small screens */
-          flex-wrap: wrap; /* Allow wrapping if absolutely necessary */
-        }
-
-        /* Chart section */
-        .chart-header {
-          margin-bottom: 15px;
-          flex-wrap: wrap;
-        }
-
-        .chart-title {
-          font-size: 0.9rem;
-          /* Removed white-space: nowrap to prevent forcing width */
-        }
-
-        .chart-container {
-          height: 180px;
-        }
-
-        /* Social proof */
-        .social-proof {
-          padding-top: 20px;
-          gap: 12px;
-        }
-
-        .avatar {
-          width: 32px;
-          height: 32px;
-        }
-
-        .proof-text {
-          font-size: 0.8rem;
-        }
+        .proof-avatars img { width: 28px; height: 28px; }
+        .proof-copy { font-size: 0.72rem; }
       }
 
-      /* Extra small devices (340px and below) */
+      /* ================================
+         EXTRA SMALL (< 360px)
+         ================================ */
       @media (max-width: 360px) {
-        body {
-          padding: 8px;
+        body { padding: 8px; }
+
+        .panel-offer { padding: 20px 14px; gap: 14px; }
+        .panel-analytics { padding: 20px 14px; }
+
+        .offer-headline { font-size: 0.82rem; }
+        .coupon-code { font-size: 0.9rem; letter-spacing: 1px; }
+        .slot-val { height: 42px; font-size: 1.15rem; }
+        .timer-slots { gap: 6px; }
+      }
+
+      /* ================================
+         TOUCH DEVICES
+         ================================ */
+      @media (hover: none) and (pointer: coarse) {
+        .coupon:hover {
+          border-color: rgba(245, 130, 31, 0.3);
+          background: var(--surface-glass);
+          box-shadow: none;
         }
 
-        .promo-content {
-          padding: 18px 15px;
+        .coupon-btn:hover {
+          background: var(--orange);
+          transform: none;
+          box-shadow: none;
         }
 
-        .analytics-panel {
-          padding: 18px 15px;
+        .coupon-btn:active {
+          background: #e0740f;
+          transform: scale(0.97);
         }
 
-        h1 {
-          font-size: 1.3rem;
-        }
-
-        .coupon-code {
-          font-size: 0.9rem;
-          letter-spacing: 0.5px;
-        }
-
-        .timer-container {
-          gap: 6px;
-        }
-
-        .time-value {
-          font-size: 1.1rem;
-          padding: 8px 0;
-        }
-
-        .time-label {
-          font-size: 0.6rem;
+        .proof-avatars img:hover {
+          transform: none;
         }
       }
     </style>
   </head>
+
   <body>
-    <div class="promo-widget">
-      <div class="promo-content">
-        <div class="site-logo">
-          <img src="sale.png" class="logo-icon" alt="Sale Logo" />
-        </div>
+    <div class="widget">
+      <!-- ========== LEFT: OFFER PANEL ========== -->
+      <div class="panel-offer">
 
-        <h1>Flash Sale: <br /><span>Lose 3-5 kg</span> in 15 days</h1>
-        <p class="slogan">100% Natural. No Hunger. No Weakness.</p>
-
-        <div class="coupon-box" onclick="copyCoupon()">
-          <span class="coupon-code" id="coupon-text">OBESITYKILLER20</span>
-          <span class="copy-btn">Copy Code</span>
-        </div>
-
-        <div class="timer-container">
-          <div class="time-box">
-            <span class="time-value" id="days">02</span>
-            <span class="time-label">Days</span>
-          </div>
-          <div class="time-box">
-            <span class="time-value" id="hours">04</span>
-            <span class="time-label">Hours</span>
-          </div>
-          <div class="time-box">
-            <span class="time-value" id="minutes">15</span>
-            <span class="time-label">Mins</span>
-          </div>
-          <div class="time-box">
-            <span class="time-value" id="seconds">45</span>
-            <span class="time-label">Secs</span>
+        <!-- Brand -->
+        <div class="brand">
+          <img src="sale.png" class="brand-logo" alt="Obesity Killer Sale" />
+          <div class="brand-text">
+            <span class="brand-name">Obesity Killer Kit</span>
+            <span class="brand-sub">Ayurvedic Weight Loss</span>
           </div>
         </div>
 
-        <div class="stock-indicator">
-          <div class="urgency-text">
-            <span style="font-size: 1.25rem">High Demand!</span>
-            <span style="font-size: 1.15rem"
-              >Only
-              <span
-                id="orders-left"
-                style="font-weight: 800; color: #5c2a2a; font-size: 1.25rem"
-                >142</span
-              >
-              left</span
-            >
+        <!-- Offer Card -->
+        <div class="offer-card">
+          <div class="offer-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
           </div>
-          <div class="stock-bar-bg">
-            <div class="stock-bar-fill" id="stock-bar"></div>
+          <div class="offer-details">
+            <span class="offer-headline">Flat &#8377;1,000 OFF &mdash; First 1000 Orders</span>
+            <span class="offer-subline">Limited flash sale. Grab yours now.</span>
           </div>
         </div>
+
+        <!-- Coupon -->
+        <div class="coupon">
+          <div class="coupon-info">
+            <span class="coupon-label">Use this code at checkout</span>
+            <span class="coupon-code" id="coupon-text">FIRSTLAST1000</span>
+          </div>
+          <button class="coupon-btn" id="copy-btn" onclick="copyCoupon()" aria-label="Copy coupon code">
+            Copy Code
+          </button>
+        </div>
+
+        <!-- Timer -->
+        <div class="timer">
+          <div class="timer-top">
+            <span class="timer-label">Sale ends in</span>
+            <span class="badge-live">
+              <span class="dot-pulse"></span>
+              Ending Soon
+            </span>
+          </div>
+          <div class="timer-slots" role="timer" aria-live="polite" aria-label="Countdown timer">
+            <div class="slot">
+              <div class="slot-val" id="t-days">02</div>
+              <span class="slot-lbl">Days</span>
+            </div>
+            <div class="slot">
+              <div class="slot-val" id="t-hours">04</div>
+              <span class="slot-lbl">Hours</span>
+            </div>
+            <div class="slot">
+              <div class="slot-val" id="t-mins">15</div>
+              <span class="slot-lbl">Mins</span>
+            </div>
+            <div class="slot">
+              <div class="slot-val" id="t-secs">45</div>
+              <span class="slot-lbl">Secs</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stock -->
+        <div class="stock">
+          <div class="stock-head">
+            <span class="stock-urgency">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+              High Demand
+            </span>
+            <span class="stock-num">
+              Only <strong id="orders-left">142</strong> left
+            </span>
+          </div>
+          <div class="stock-track">
+            <div class="stock-fill" id="stock-bar" style="width: 71%;"></div>
+          </div>
+        </div>
+
       </div>
 
-      <div class="analytics-panel">
-        <div class="chart-header">
+      <!-- ========== RIGHT: ANALYTICS PANEL ========== -->
+      <div class="panel-analytics">
+
+        <div class="chart-head">
           <div class="chart-title">
-            <div class="live-dot"></div>
+            <span class="dot-green"></span>
             Live Purchase Activity
           </div>
-          <span
-            style="
-              font-size: 0.75rem;
-              color: #888;
-              font-weight: 600;
-              text-transform: uppercase;
-            "
-            >Real-time</span
-          >
+          <span class="chart-pill">Real-time</span>
         </div>
 
-        <div class="chart-container">
+        <div class="chart-area">
           <canvas id="salesChart"></canvas>
         </div>
 
-        <div class="social-proof">
-          <div class="avatar-group">
-            <img
-              src="https://i.pravatar.cc/100?img=12"
-              class="avatar"
-              alt="User"
-            />
-            <img
-              src="https://i.pravatar.cc/100?img=32"
-              class="avatar"
-              alt="User"
-            />
-            <img
-              src="https://i.pravatar.cc/100?img=47"
-              class="avatar"
-              alt="User"
-            />
+        <div class="proof">
+          <div class="proof-avatars">
+            <img src="https://i.pravatar.cc/100?img=12" alt="Buyer" />
+            <img src="https://i.pravatar.cc/100?img=32" alt="Buyer" />
+            <img src="https://i.pravatar.cc/100?img=47" alt="Buyer" />
           </div>
-          <div class="proof-text">
-            <b><span id="recent-buyers">28</span> people</b> purchased this kit
-            <br />in the last 15 minutes.
+          <div class="proof-copy">
+            <strong><span id="recent-buyers">28</span> people</strong> purchased this kit<br />in the last 15 minutes.
           </div>
         </div>
+
       </div>
     </div>
 
     <script>
-      // --- 1. Countdown Timer Logic (Persistent) ---
-      const TIMER_KEY = "obesity_killer_timer_v1";
-      let countDownDate = localStorage.getItem(TIMER_KEY);
+      /* ==================================
+         1. COUNTDOWN TIMER
+         ================================== */
+      const TIMER_KEY = "ok_timer_v3";
+      const TIMER_MS = 2 * 24 * 60 * 60 * 1000;
 
-      if (!countDownDate) {
-        // Set for 48 hours from now if not exists
-        countDownDate = new Date().getTime() + 2 * 24 * 60 * 60 * 1000;
-        localStorage.setItem(TIMER_KEY, countDownDate);
-      } else {
-        countDownDate = parseInt(countDownDate);
-        // If expired, reset it to new 48 hours (Evergreen)
-        if (new Date().getTime() > countDownDate) {
-          countDownDate = new Date().getTime() + 2 * 24 * 60 * 60 * 1000;
-          localStorage.setItem(TIMER_KEY, countDownDate);
+      let target = (function () {
+        let s = localStorage.getItem(TIMER_KEY);
+        if (s) { s = +s; if (Date.now() < s) return s; }
+        const t = Date.now() + TIMER_MS;
+        localStorage.setItem(TIMER_KEY, t);
+        return t;
+      })();
+
+      function tick() {
+        const d = Math.max(0, target - Date.now());
+        const pad = n => String(n).padStart(2, "0");
+        document.getElementById("t-days").textContent  = pad(Math.floor(d / 864e5));
+        document.getElementById("t-hours").textContent = pad(Math.floor((d % 864e5) / 36e5));
+        document.getElementById("t-mins").textContent  = pad(Math.floor((d % 36e5) / 6e4));
+        document.getElementById("t-secs").textContent  = pad(Math.floor((d % 6e4) / 1e3));
+        if (d === 0) {
+          target = Date.now() + TIMER_MS;
+          localStorage.setItem(TIMER_KEY, target);
         }
       }
+      setInterval(tick, 1000);
+      tick();
 
-      function updateTimer() {
-        const now = new Date().getTime();
-        const distance = countDownDate - now;
+      /* ==================================
+         2. STOCK SIMULATION
+         ================================== */
+      const SK = "ok_stock_v3";
+      const START = 142, MIN = 3, VIZ = 200;
 
-        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-        const hours = Math.floor(
-          (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
-        );
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      let st = (function () {
+        let s = JSON.parse(localStorage.getItem(SK));
+        if (s && Date.now() - s.t < 864e5) return s;
+        return { r: START, b: 28, t: Date.now() };
+      })();
 
-        document.getElementById("days").innerText =
-          days < 10 ? "0" + days : days;
-        document.getElementById("hours").innerText =
-          hours < 10 ? "0" + hours : hours;
-        document.getElementById("minutes").innerText =
-          minutes < 10 ? "0" + minutes : minutes;
-        document.getElementById("seconds").innerText =
-          seconds < 10 ? "0" + seconds : seconds;
-      }
-      setInterval(updateTimer, 1000);
-      updateTimer();
+      function save() { st.t = Date.now(); localStorage.setItem(SK, JSON.stringify(st)); }
 
-      // --- 2. Production Ready "FOMO" Stock Logic (Persistent) ---
-
-      // Configuration
-      const STARTING_STOCK = 142;
-      const MIN_STOCK = 3; // Don't let it hit 0 completely to keep sales open
-      const STORAGE_KEY = "obesity_killer_stock_v1";
-
-      // Initialize State from LocalStorage or Default
-      let state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
-        ordersRemaining: STARTING_STOCK,
-        recentBuyers: 28,
-        lastUpdate: Date.now(),
-      };
-
-      // Reset if it's been more than 24 hours (simulating a new daily sale)
-      if (Date.now() - state.lastUpdate > 24 * 60 * 60 * 1000) {
-        state.ordersRemaining = STARTING_STOCK;
-        state.recentBuyers = 28;
-      }
-
-      function saveState() {
-        state.lastUpdate = Date.now();
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      }
-
-      function updateDisplay() {
-        const totalStock = 200; // Visual reference for bar width
-
-        // Update Text
-        document.getElementById("orders-left").innerText =
-          state.ordersRemaining;
-        document.getElementById("recent-buyers").innerText = state.recentBuyers;
-
-        // Update Progress Bar
-        const percentage = (state.ordersRemaining / totalStock) * 100;
+      function render() {
+        document.getElementById("orders-left").textContent = st.r;
+        document.getElementById("recent-buyers").textContent = st.b;
         const bar = document.getElementById("stock-bar");
-        bar.style.width = percentage + "%";
-
-        // Dynamic Color: Orange -> Dark Orange -> Panic Red (No Green)
-        if (state.ordersRemaining > 100) {
-          bar.style.background = "linear-gradient(90deg, #ff9800, #ff5722)"; // Standard Orange
-        } else if (state.ordersRemaining > 50) {
-          bar.style.background = "linear-gradient(90deg, #ff5722, #d84315)"; // Deep Orange/Red
-        } else {
-          bar.style.background = "linear-gradient(90deg, #d32f2f, #b71c1c)"; // Critical Red
-        }
+        bar.style.width = (st.r / VIZ) * 100 + "%";
+        if (st.r > 100) bar.style.background = "linear-gradient(90deg, #f5821f, #ff9a44)";
+        else if (st.r > 50) bar.style.background = "linear-gradient(90deg, #ff6b3a, #e05020)";
+        else bar.style.background = "linear-gradient(90deg, #ef4444, #dc2626)";
       }
 
-      function decreaseStock() {
-        // Stop decrementing if we hit minimum safety stock
-        if (state.ordersRemaining <= MIN_STOCK) return;
-
-        // Logic:
-        // 1. Burst Mode (10% chance): Drop 3-5 items at once
-        // 2. Normal Mode: Drop 1 item
-
-        const isBurst = Math.random() < 0.1;
-        const dropAmount = isBurst ? Math.floor(Math.random() * 3) + 2 : 1;
-
-        // Ensure we don't go below min
-        const actualDrop = Math.min(
-          dropAmount,
-          state.ordersRemaining - MIN_STOCK,
-        );
-
-        if (actualDrop > 0) {
-          state.ordersRemaining -= actualDrop;
-          state.recentBuyers += actualDrop;
-          saveState();
-          updateDisplay();
-
-          // If it was a burst, update the chart immediately
-          if (isBurst) updateChartData();
-        }
+      function drop() {
+        if (st.r <= MIN) return;
+        const burst = Math.random() < 0.12;
+        const n = Math.min(burst ? ~~(Math.random() * 4) + 2 : 1, st.r - MIN);
+        if (n <= 0) return;
+        st.r -= n; st.b += n;
+        save(); render();
+        if (burst) pushChart();
       }
 
-      function salesLoop() {
-        // FAST DEMO TIMINGS (Adjusted for Urgency)
-        // High Stock (>100): Slow Pace (4s - 7s) -> Browsing Phase
-        // Med Stock (50-100): Moderate Pace (2s - 5s) -> Interest Phase
-        // Panic Stock (<50): High Urgency (0.7s - 2.5s) -> Buying Frenzy Phase
-
-        let minDelay, maxDelay;
-
-        if (state.ordersRemaining > 100) {
-          minDelay = 4000;
-          maxDelay = 7000;
-        } else if (state.ordersRemaining > 50) {
-          minDelay = 2000;
-          maxDelay = 5000;
-        } else {
-          // Critical Zone: Never wait longer than 2.5s
-          minDelay = 700;
-          maxDelay = 2500;
-        }
-
-        const randTime = Math.floor(
-          Math.random() * (maxDelay - minDelay + 1) + minDelay,
-        );
-
-        setTimeout(() => {
-          decreaseStock();
-          // Update chart often in panic mode (70%), less often in calm mode (40%)
-          const updateChance = state.ordersRemaining < 50 ? 0.7 : 0.4;
-          if (Math.random() < updateChance) updateChartData();
-
-          salesLoop(); // Recursion
-        }, randTime);
+      function loop() {
+        let lo, hi;
+        if (st.r > 100) { lo = 5000; hi = 8000; }
+        else if (st.r > 50) { lo = 3000; hi = 5000; }
+        else { lo = 1000; hi = 3000; }
+        setTimeout(function () {
+          drop();
+          if (Math.random() < (st.r < 50 ? 0.65 : 0.35)) pushChart();
+          loop();
+        }, ~~(Math.random() * (hi - lo + 1)) + lo);
       }
+      render(); loop();
 
-      // Initialize
-      updateDisplay();
-      salesLoop();
+      /* ==================================
+         3. CHART
+         ================================== */
+      const cx = document.getElementById("salesChart").getContext("2d");
+      const grd = cx.createLinearGradient(0, 0, 0, 200);
+      grd.addColorStop(0, "rgba(245, 130, 31, 0.3)");
+      grd.addColorStop(1, "rgba(245, 130, 31, 0.0)");
 
-      // --- 3. Analytics Chart (Chart.js) ---
-      const ctx = document.getElementById("salesChart").getContext("2d");
-
-      // Gradient for chart area
-      const gradient = ctx.createLinearGradient(0, 0, 0, 220);
-      gradient.addColorStop(0, "rgba(255, 107, 0, 0.45)");
-      gradient.addColorStop(1, "rgba(255, 107, 0, 0.0)");
-
-      const salesChart = new Chart(ctx, {
+      const chart = new Chart(cx, {
         type: "line",
         data: {
           labels: ["10m", "8m", "6m", "4m", "2m", "Now"],
-          datasets: [
-            {
-              label: "Purchases",
-              data: [12, 18, 14, 26, 21, 32],
-              borderColor: "#FF6B00",
-              backgroundColor: gradient,
-              borderWidth: 3,
-              pointBackgroundColor: "#fff",
-              pointBorderColor: "#4A1212",
-              pointBorderWidth: 2,
-              pointRadius: 4,
-              pointHoverRadius: 6,
-              fill: true,
-              tension: 0.4,
-            },
-          ],
+          datasets: [{
+            label: "Purchases",
+            data: [14, 22, 17, 28, 24, 35],
+            borderColor: "#f5821f",
+            backgroundColor: grd,
+            borderWidth: 2,
+            pointBackgroundColor: "#1a1a1a",
+            pointBorderColor: "#f5821f",
+            pointBorderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: "#f5821f",
+            fill: true,
+            tension: 0.45,
+          }],
         },
         options: {
           responsive: true,
@@ -878,63 +1021,48 @@
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: "#4A1212",
-              titleFont: { family: "Poppins" },
-              bodyFont: { family: "Poppins" },
+              backgroundColor: "rgba(0,0,0,0.85)",
+              titleFont: { family: "DM Sans", size: 11 },
+              bodyFont: { family: "DM Sans", size: 12, weight: "700" },
               padding: 10,
+              cornerRadius: 8,
               displayColors: false,
-              callbacks: {
-                label: function (context) {
-                  return context.parsed.y + " Orders";
-                },
-              },
+              callbacks: { label: c => c.parsed.y + " orders" },
             },
           },
           scales: {
             x: {
               grid: { display: false },
-              ticks: { font: { family: "Poppins", size: 11 }, color: "#888" },
+              border: { display: false },
+              ticks: { font: { family: "DM Sans", size: 11, weight: "500" }, color: "#555" },
             },
-            y: {
-              display: false,
-              suggestedMin: 0,
-              suggestedMax: 45,
-            },
+            y: { display: false, suggestedMin: 0, suggestedMax: 50 },
           },
-          animation: {
-            duration: 800,
-            easing: "easeOutQuart",
-          },
+          animation: { duration: 500, easing: "easeOutQuart" },
         },
       });
 
-      // Update Chart
-      function updateChartData() {
-        // Remove the oldest data point
-        salesChart.data.datasets[0].data.shift();
-
-        // Ensure labels remain relative ("10m" to "Now")
-        // Instead of shifting labels, we just reset them so they always show the same relative timeframe
-        salesChart.data.labels = ["10m", "8m", "6m", "4m", "2m", "Now"];
-
-        // Add new random data point
-        const newVal = Math.floor(Math.random() * (40 - 15) + 15);
-        salesChart.data.datasets[0].data.push(newVal);
-
-        salesChart.update();
+      function pushChart() {
+        chart.data.datasets[0].data.shift();
+        chart.data.datasets[0].data.push(~~(Math.random() * 25) + 15);
+        chart.data.labels = ["10m", "8m", "6m", "4m", "2m", "Now"];
+        chart.update();
       }
 
-      // Coupon Copy Logic
+      /* ==================================
+         4. COPY COUPON
+         ================================== */
       function copyCoupon() {
-        const code = document.getElementById("coupon-text").innerText;
-        navigator.clipboard.writeText(code);
-        const btn = document.querySelector(".copy-btn");
-        btn.innerText = "Copied!";
-        btn.style.backgroundColor = "var(--primary-maroon)";
-        setTimeout(() => {
-          btn.innerText = "Copy Code";
-          btn.style.backgroundColor = "var(--primary-orange)";
-        }, 2000);
+        const code = document.getElementById("coupon-text").textContent;
+        const btn = document.getElementById("copy-btn");
+        navigator.clipboard.writeText(code).then(function () {
+          btn.textContent = "Copied!";
+          btn.classList.add("copied");
+          setTimeout(function () {
+            btn.textContent = "Copy Code";
+            btn.classList.remove("copied");
+          }, 2000);
+        });
       }
     </script>
   </body>
