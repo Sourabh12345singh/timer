@@ -1056,14 +1056,14 @@
               <span class="stock-title">High Demand</span>
             </div>
             <div class="stock-number">
-              <span class="stock-val" id="orders-left">142</span>
+              <span class="stock-val" id="orders-left">167</span>
               <span class="stock-unit">units left</span>
             </div>
             <div class="stock-track">
-              <div class="stock-fill" id="stock-bar" style="width: 71%;"></div>
+              <div class="stock-fill" id="stock-bar" style="width: 83%;"></div>
             </div>
             <div class="stock-meta">
-              <strong><span id="recent-buyers-alt">28</span></strong> purchased recently
+              <strong><span id="recent-buyers-alt">12</span></strong> purchased recently
             </div>
           </div>
 
@@ -1094,7 +1094,7 @@
             <img src="https://i.pravatar.cc/100?img=47" alt="Buyer" loading="lazy" />
           </div>
           <div class="proof-text">
-            <strong><span class="count-hl" id="recent-buyers">28</span> people</strong> purchased this kit<br />in the last 15 minutes.
+            <strong><span class="count-hl" id="recent-buyers">12</span> people</strong> purchased this kit<br />in the last 15 minutes.
           </div>
         </div>
 
@@ -1154,17 +1154,33 @@
       tick();
 
       /* ==================================
-         2. STOCK SIMULATION
+         2. STOCK SIMULATION — Non-linear FOMO
+         ==================================
+         Starts high (167), drains SLOWLY at first.
+         As stock drops, speed + burst frequency ramp up.
+         Bottoms out at FLOOR (14) and hovers — never hits 0.
+         Session-aware: resets if stale or already at floor.
+
+         Phases:
+           Calm   (167-100): slow ticks 8-14s, no bursts, -1 each
+           Active ( 99- 50): moderate 5-8s, 8% burst chance (-2 to -3)
+           Urgent ( 49- 30): faster 3-5s, 18% burst chance (-2 to -4)
+           Panic  ( 29-FLOOR): rapid 1.5-3s, 30% burst chance (-2 to -5)
+           Floor  (<=FLOOR): stop dropping, hover
          ================================== */
-      const SK = "ok_stock_v4";
-      const START = 142, MIN = 3, VIZ = 200;
+      const SK = "ok_stock_v5";
+      const START = 167;
+      const FLOOR = 14;
+      const VIZ = 200;
+      const STALE_MS = 4 * 60 * 60 * 1000; /* 4 hours — reset if older */
 
       let st = (function () {
         try {
-          let s = JSON.parse(localStorage.getItem(SK));
-          if (s && Date.now() - s.t < 864e5) return s;
+          const s = JSON.parse(localStorage.getItem(SK));
+          if (s && Date.now() - s.t < STALE_MS && s.r > FLOOR) return s;
         } catch (e) {}
-        return { r: START, b: 28, t: Date.now() };
+        /* Fresh start or stale/bottomed-out → reset to high stock */
+        return { r: START, b: 12, t: Date.now() };
       })();
 
       function save() { st.t = Date.now(); localStorage.setItem(SK, JSON.stringify(st)); }
@@ -1174,7 +1190,6 @@
         const oldVal = el.textContent;
         el.textContent = st.r;
 
-        /* Update both buyer displays */
         const buyerAlt = document.getElementById("recent-buyers-alt");
         if (buyerAlt) buyerAlt.textContent = st.b;
         document.getElementById("recent-buyers").textContent = st.b;
@@ -1186,31 +1201,71 @@
         }
 
         const bar = document.getElementById("stock-bar");
-        bar.style.width = (st.r / VIZ) * 100 + "%";
-        /* Warm gradients instead of harsh reds */
-        if (st.r > 100) bar.style.background = "linear-gradient(90deg, #f5821f, #e8650a)";
-        else if (st.r > 50) bar.style.background = "linear-gradient(90deg, #e8650a, #d4520a)";
-        else bar.style.background = "linear-gradient(90deg, #d4520a, #b8420a)";
+        const pct = Math.max(4, (st.r / VIZ) * 100);
+        bar.style.width = pct + "%";
+
+        /* Color shifts as stock drops */
+        if (st.r > 100)     bar.style.background = "linear-gradient(90deg, #f5821f, #e8860a)";
+        else if (st.r > 50) bar.style.background = "linear-gradient(90deg, #e8750a, #d4580a)";
+        else if (st.r > 25) bar.style.background = "linear-gradient(90deg, #d4520a, #c0420a)";
+        else                 bar.style.background = "linear-gradient(90deg, #c0420a, #a83508)";
       }
 
       function drop() {
-        if (st.r <= MIN) return;
-        const burst = Math.random() < 0.12;
-        const n = Math.min(burst ? ~~(Math.random() * 4) + 2 : 1, st.r - MIN);
+        if (st.r <= FLOOR) return; /* hold at floor */
+
+        let burst = false;
+        let n = 1; /* default: single unit */
+
+        if (st.r > 100) {
+          /* CALM — just single drops, no bursts */
+          n = 1;
+        } else if (st.r > 50) {
+          /* ACTIVE — occasional small bursts */
+          burst = Math.random() < 0.08;
+          n = burst ? ~~(Math.random() * 2) + 2 : 1; /* burst: 2-3 */
+        } else if (st.r > 30) {
+          /* URGENT — more frequent, bigger bursts */
+          burst = Math.random() < 0.18;
+          n = burst ? ~~(Math.random() * 3) + 2 : 1; /* burst: 2-4 */
+        } else {
+          /* PANIC — frequent large bursts */
+          burst = Math.random() < 0.30;
+          n = burst ? ~~(Math.random() * 4) + 2 : 1; /* burst: 2-5 */
+        }
+
+        /* Never go below floor */
+        n = Math.min(n, st.r - FLOOR);
         if (n <= 0) return;
-        st.r -= n; st.b += n;
-        save(); render();
+
+        st.r -= n;
+        st.b += n;
+        save();
+        render();
         if (burst) pushChart();
       }
 
       function loop() {
+        if (st.r <= FLOOR) {
+          /* At floor: just hang here, occasional tiny chart blip */
+          setTimeout(function () {
+            if (Math.random() < 0.2) pushChart();
+            loop();
+          }, 8000 + ~~(Math.random() * 5000));
+          return;
+        }
+
         let lo, hi;
-        if (st.r > 100) { lo = 5000; hi = 8000; }
-        else if (st.r > 50) { lo = 3000; hi = 5000; }
-        else { lo = 1000; hi = 3000; }
+        if (st.r > 100)     { lo = 8000;  hi = 14000; } /* Calm: 8-14s */
+        else if (st.r > 50)  { lo = 5000;  hi = 8000;  } /* Active: 5-8s */
+        else if (st.r > 30)  { lo = 3000;  hi = 5000;  } /* Urgent: 3-5s */
+        else                  { lo = 1500;  hi = 3000;  } /* Panic: 1.5-3s */
+
         setTimeout(function () {
           drop();
-          if (Math.random() < (st.r < 50 ? 0.65 : 0.35)) pushChart();
+          /* Chart update probability also scales with urgency */
+          const chartChance = st.r > 100 ? 0.15 : st.r > 50 ? 0.30 : st.r > 30 ? 0.50 : 0.65;
+          if (Math.random() < chartChance) pushChart();
           loop();
         }, ~~(Math.random() * (hi - lo + 1)) + lo);
       }
