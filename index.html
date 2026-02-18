@@ -9,84 +9,67 @@
     ============================================================
     IMPLEMENTATION DOCUMENT
     ============================================================
+    Design tokens extracted from theobesitykiller.com/products/shop
 
-    1. OBJECTIVE
-       Build a sales countdown banner with a live analytics chart
-       that creates purchase urgency during a limited-time sale.
-       The banner visually aligns with theobesitykiller.com while
-       pushing a modern, premium aesthetic.
+    COLORS (exact match):
+      Highlight/CTA:  #f5821f / #ff5f14
+      Brand:          #121212
+      Background:     #ffffff
+      Warm cream:     #fefae0, #efeadc, #eae5d7, #fcfbf7
+      Text primary:   #4d4d4d
+      Text heading:   #121212
+      Borders:        #ececec
+      Button hover:   #4F8A10
+      Gradient:       linear-gradient(130deg, #f5821f, rgba(245,130,31,.7) 96%)
+      Radius:         3px / 6px / 16px
 
-    2. DESIGN DIRECTION
-       "Modern Editorial" - dark surfaces, glass-morphism cards,
-       bold type contrasts, warm orange accents on dark ground.
-       High contrast. Generous whitespace. Intentional motion.
-
-    3. DESIGN SYSTEM
-       - Font:       DM Sans 400/500/700 (modern geometric sans)
-       - Primary:    #f5821f (brand orange)
-       - Surfaces:   #0f0f0f (deep), #1a1a1a (card), #242424 (elevated)
-       - Glass:      rgba(255,255,255,0.04) with backdrop-blur
-       - Text:       #ffffff, #a0a0a0 (muted), #666 (disabled)
-       - Accent:     #ff6b3a (warm), #ef4444 (urgency red)
-       - Radius:     12px (cards), 8px (elements), 20px (pills)
-       - Spacing:    4px base scale
-       - Shadows:    layered dark shadows + orange glow on focus
-
-    4. INFORMATION HIERARCHY
-       Brand trust -> Offer headline -> Coupon -> Timer -> Stock
-       Right panel: Chart + Social proof
-
-    5. STOCK SIMULATION
-       Non-linear: Poisson-inspired intervals, burst drops (12%),
-       3-tier speed (calm/moderate/panic), localStorage persistent.
-
-    6. RESPONSIVE
-       Desktop grid -> Tablet/Mobile single column stack.
-       Fluid type scaling. Touch-friendly tap targets.
-
+    FONT: Poppins 400/500/600/700
     ============================================================
     -->
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&family=JetBrains+Mono:wght@600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+      /* ================================
+         DESIGN TOKENS — theobesitykiller.com
+         ================================ */
       :root {
         --orange: #f5821f;
-        --orange-bright: #ff9a44;
-        --orange-dim: rgba(245, 130, 31, 0.12);
-        --orange-glow: rgba(245, 130, 31, 0.25);
+        --orange-cta: #ff5f14;
+        --orange-light: rgba(245, 130, 31, 0.08);
+        --orange-border: rgba(245, 130, 31, 0.25);
+        --orange-gradient: linear-gradient(130deg, #f5821f, rgba(245, 130, 31, 0.7) 96%);
 
-        --surface-0: #0a0a0a;
-        --surface-1: #111111;
-        --surface-2: #1a1a1a;
-        --surface-3: #242424;
-        --surface-glass: rgba(255, 255, 255, 0.035);
-        --surface-glass-border: rgba(255, 255, 255, 0.06);
+        --brand: #121212;
+        --green: #4F8A10;
 
-        --text-0: #ffffff;
-        --text-1: #e0e0e0;
-        --text-2: #a0a0a0;
-        --text-3: #666666;
+        --bg-white: #ffffff;
+        --bg-cream: #fefae0;
+        --bg-warm: #fcfbf7;
+        --bg-secondary: #f3f3f3;
 
-        --red: #ef4444;
-        --red-dim: rgba(239, 68, 68, 0.12);
-        --green: #22c55e;
-        --green-dim: rgba(34, 197, 94, 0.12);
+        --text-heading: #121212;
+        --text-body: #4d4d4d;
+        --text-muted: #7d7d7d;
+        --text-white: #ffffff;
 
-        --radius-sm: 8px;
-        --radius-md: 12px;
+        --border: #ececec;
+        --border-dark: #7d7d7d;
+
+        --radius-sm: 3px;
+        --radius-md: 6px;
         --radius-lg: 16px;
-        --radius-xl: 20px;
-        --radius-full: 9999px;
 
-        --ease: cubic-bezier(0.16, 1, 0.3, 1);
-        --ease-out: cubic-bezier(0, 0, 0.2, 1);
+        --shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.08);
+
+        --font: 'Poppins', sans-serif;
       }
 
       *,
@@ -97,15 +80,14 @@
         padding: 0;
       }
 
-      /* Disable tap highlight on mobile */
       button, a {
         -webkit-tap-highlight-color: transparent;
       }
 
       body {
-        font-family: "DM Sans", sans-serif;
-        background: var(--surface-0);
-        color: var(--text-1);
+        font-family: var(--font);
+        background: var(--bg-warm);
+        color: var(--text-body);
         min-height: 100vh;
         display: flex;
         justify-content: center;
@@ -113,171 +95,125 @@
         padding: 24px;
         padding: 24px max(24px, env(safe-area-inset-right)) 24px max(24px, env(safe-area-inset-left));
         -webkit-font-smoothing: antialiased;
-      }
-
-      /* Subtle background texture */
-      body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        background:
-          radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245, 130, 31, 0.06), transparent),
-          radial-gradient(ellipse 60% 50% at 80% 100%, rgba(245, 130, 31, 0.03), transparent);
-        pointer-events: none;
-        z-index: 0;
+        line-height: 1.5;
       }
 
       /* ================================
          WIDGET SHELL
          ================================ */
       .widget {
-        position: relative;
-        z-index: 1;
         width: 100%;
-        max-width: 980px;
+        max-width: 920px;
         display: grid;
         grid-template-columns: 1.15fr 1fr;
-        background: var(--surface-1);
-        border: 1px solid var(--surface-glass-border);
+        background: var(--bg-white);
+        border: 1px solid var(--border);
         border-radius: var(--radius-lg);
         overflow: hidden;
-        box-shadow:
-          0 0 0 1px rgba(255,255,255,0.02),
-          0 20px 60px rgba(0,0,0,0.5),
-          0 0 80px rgba(245,130,31,0.04);
-        animation: widgetIn 0.7s var(--ease) both;
-      }
-
-      @keyframes widgetIn {
-        from { opacity: 0; transform: translateY(20px) scale(0.98); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
+        box-shadow: var(--shadow-lg);
       }
 
       /* ================================
-         LEFT PANEL: OFFER
+         LEFT PANEL — OFFER
          ================================ */
       .panel-offer {
-        padding: 36px 32px;
+        padding: 32px 28px;
         display: flex;
         flex-direction: column;
-        gap: 24px;
+        gap: 20px;
         position: relative;
       }
 
-      /* Top accent line */
+      /* Orange top accent */
       .panel-offer::before {
         content: "";
         position: absolute;
-        top: 0;
-        left: 0;
+        top: 0; left: 0;
         width: 100%;
-        height: 3px;
-        background: linear-gradient(90deg, var(--orange), var(--orange-bright), transparent 80%);
+        height: 4px;
+        background: var(--orange-gradient);
       }
 
-      /* --- Brand --- */
+      /* --- Brand row --- */
       .brand {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 12px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border);
       }
 
       .brand-logo {
-        width: 56px;
-        height: 56px;
+        width: 60px;
+        height: 60px;
         object-fit: contain;
-        border-radius: var(--radius-sm);
-        background: rgba(255, 255, 255, 0.92);
-        padding: 6px;
-        box-shadow:
-          0 0 0 1px rgba(255, 255, 255, 0.1),
-          0 2px 8px rgba(0, 0, 0, 0.3),
-          0 0 20px rgba(245, 130, 31, 0.08);
+        border-radius: var(--radius-md);
       }
 
       .brand-text {
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 1px;
       }
 
       .brand-name {
-        font-size: 0.9rem;
+        font-size: 0.95rem;
         font-weight: 700;
-        color: var(--text-0);
+        color: var(--text-heading);
         letter-spacing: -0.01em;
       }
 
       .brand-sub {
-        font-size: 0.65rem;
-        font-weight: 500;
-        color: var(--orange);
+        font-size: 0.62rem;
+        font-weight: 600;
+        color: var(--green);
         text-transform: uppercase;
-        letter-spacing: 1.2px;
+        letter-spacing: 1.5px;
       }
 
-      /* --- Offer Card --- */
-      .offer-card {
-        background: linear-gradient(135deg, var(--orange), #e86a10);
+      /* --- Offer banner --- */
+      .offer-banner {
+        background: var(--orange-gradient);
         border-radius: var(--radius-md);
-        padding: 20px 24px;
+        padding: 16px 20px;
         display: flex;
         align-items: center;
-        gap: 16px;
-        position: relative;
-        overflow: hidden;
-      }
-
-      /* Decorative circle */
-      .offer-card::after {
-        content: "";
-        position: absolute;
-        right: -20px;
-        top: -20px;
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.08);
-        pointer-events: none;
+        gap: 14px;
       }
 
       .offer-icon {
-        width: 44px;
-        height: 44px;
-        background: rgba(255, 255, 255, 0.15);
+        width: 42px;
+        height: 42px;
+        background: rgba(255, 255, 255, 0.2);
         border-radius: var(--radius-sm);
         display: grid;
         place-items: center;
         flex-shrink: 0;
-        backdrop-filter: blur(4px);
       }
 
       .offer-icon svg {
         width: 20px;
         height: 20px;
-        color: #fff;
+        color: var(--text-white);
       }
 
       .offer-details {
         display: flex;
         flex-direction: column;
         gap: 2px;
-        position: relative;
-        z-index: 1;
       }
 
       .offer-headline {
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         font-weight: 700;
-        color: #fff;
+        color: var(--text-white);
         line-height: 1.3;
-        letter-spacing: -0.01em;
       }
 
-      .offer-subline {
-        font-size: 0.72rem;
-        color: rgba(255, 255, 255, 0.8);
+      .offer-sub {
+        font-size: 0.7rem;
         font-weight: 400;
+        color: rgba(255, 255, 255, 0.85);
       }
 
       /* --- Coupon --- */
@@ -285,69 +221,65 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        background: var(--surface-glass);
-        border: 1px dashed rgba(245, 130, 31, 0.3);
+        background: var(--bg-warm);
+        border: 2px dashed var(--orange-border);
         border-radius: var(--radius-md);
-        padding: 14px 18px;
-        transition: all 0.25s var(--ease);
+        padding: 12px 16px;
+        transition: all 0.2s ease;
       }
 
       .coupon:hover {
+        background: var(--orange-light);
         border-color: var(--orange);
-        background: var(--orange-dim);
-        box-shadow: 0 0 20px var(--orange-glow);
       }
 
       .coupon-info {
         flex: 1;
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 1px;
       }
 
       .coupon-label {
-        font-size: 0.65rem;
-        font-weight: 500;
-        color: var(--text-2);
+        font-size: 0.62rem;
+        font-weight: 600;
+        color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.8px;
       }
 
       .coupon-code {
-        font-family: "JetBrains Mono", monospace;
         font-size: 1.05rem;
-        font-weight: 600;
-        color: var(--orange-bright);
+        font-weight: 700;
+        color: var(--brand);
         letter-spacing: 1.5px;
       }
 
       .coupon-btn {
         border: none;
-        background: var(--orange);
-        color: #fff;
-        font-family: "DM Sans", sans-serif;
+        background: var(--orange-cta);
+        color: var(--text-white);
+        font-family: var(--font);
         font-size: 0.7rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.6px;
-        padding: 10px 18px;
+        letter-spacing: 0.5px;
+        padding: 10px 20px;
         min-height: 44px;
         border-radius: var(--radius-sm);
         cursor: pointer;
-        transition: all 0.2s var(--ease);
+        transition: all 0.2s ease;
         white-space: nowrap;
-        position: relative;
-        overflow: hidden;
       }
 
       .coupon-btn:hover {
-        background: #e0740f;
+        background: #e5520a;
         transform: translateY(-1px);
-        box-shadow: 0 4px 16px var(--orange-glow);
+        box-shadow: 0 4px 12px rgba(245, 130, 31, 0.25);
       }
 
       .coupon-btn:active {
-        transform: scale(0.97) translateY(0);
+        transform: scale(0.97);
       }
 
       .coupon-btn.copied {
@@ -355,7 +287,7 @@
       }
 
       /* --- Timer --- */
-      .timer {
+      .timer-section {
         display: flex;
         flex-direction: column;
         gap: 10px;
@@ -370,9 +302,9 @@
       .timer-label {
         font-size: 0.72rem;
         font-weight: 700;
-        color: var(--text-2);
+        color: var(--text-body);
         text-transform: uppercase;
-        letter-spacing: 0.8px;
+        letter-spacing: 0.5px;
       }
 
       .badge-live {
@@ -381,25 +313,25 @@
         gap: 6px;
         font-size: 0.6rem;
         font-weight: 700;
-        color: var(--red);
+        color: #d32f2f;
         text-transform: uppercase;
-        letter-spacing: 0.6px;
-        background: var(--red-dim);
+        letter-spacing: 0.5px;
+        background: rgba(211, 47, 47, 0.08);
         padding: 4px 12px;
-        border-radius: var(--radius-full);
+        border-radius: 20px;
       }
 
       .dot-pulse {
         width: 6px;
         height: 6px;
-        background: var(--red);
+        background: #d32f2f;
         border-radius: 50%;
-        animation: dotPulse 1.6s ease-in-out infinite;
+        animation: pulse 1.6s ease-in-out infinite;
       }
 
-      @keyframes dotPulse {
+      @keyframes pulse {
         0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.3; transform: scale(1.5); }
+        50% { opacity: 0.3; transform: scale(1.4); }
       }
 
       .timer-slots {
@@ -416,63 +348,44 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        height: 56px;
-        font-size: 1.6rem;
+        height: 52px;
+        font-size: 1.45rem;
         font-weight: 700;
-        color: var(--text-0);
-        background: var(--surface-2);
-        border: 1px solid var(--surface-glass-border);
-        border-radius: var(--radius-sm);
+        color: var(--text-white);
+        background: var(--brand);
+        border-radius: var(--radius-md);
         position: relative;
         overflow: hidden;
         font-variant-numeric: tabular-nums;
-        letter-spacing: -0.02em;
+        box-shadow: 0 3px 10px rgba(18, 18, 18, 0.15);
       }
 
-      /* Horizontal split line */
-      .slot-val::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 50%;
-        height: 1px;
-        background: rgba(255, 255, 255, 0.04);
-        pointer-events: none;
-      }
-
-      /* Top highlight */
+      /* Glass reflection on top half */
       .slot-val::after {
         content: "";
         position: absolute;
-        top: 0;
-        left: 0;
+        top: 0; left: 0;
         width: 100%;
         height: 50%;
-        background: rgba(255, 255, 255, 0.02);
+        background: rgba(255, 255, 255, 0.08);
         pointer-events: none;
       }
 
       .slot-lbl {
         font-size: 0.6rem;
-        font-weight: 500;
-        color: var(--text-3);
+        font-weight: 600;
+        color: var(--text-muted);
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.8px;
         margin-top: 6px;
-      }
-
-      /* Colon separators */
-      .timer-slots .slot:not(:last-child) .slot-val::after {
-        /* We'll use a different approach with pseudo */
       }
 
       /* --- Stock --- */
       .stock {
-        background: var(--surface-glass);
-        border: 1px solid var(--surface-glass-border);
+        background: #fff5ee;
+        border: 1px solid #ffe0cc;
         border-radius: var(--radius-md);
-        padding: 16px 18px;
+        padding: 14px 16px;
         display: flex;
         flex-direction: column;
         gap: 10px;
@@ -487,10 +400,10 @@
       .stock-urgency {
         display: flex;
         align-items: center;
-        gap: 6px;
-        font-size: 0.78rem;
+        gap: 5px;
+        font-size: 0.82rem;
         font-weight: 700;
-        color: var(--red);
+        color: #d32f2f;
       }
 
       .stock-urgency svg {
@@ -498,57 +411,44 @@
         height: 14px;
       }
 
-      .stock-num {
+      .stock-count {
         font-size: 0.82rem;
         font-weight: 500;
-        color: var(--text-2);
+        color: var(--text-body);
       }
 
-      .stock-num strong {
-        font-size: 1.05rem;
-        font-weight: 700;
-        color: var(--text-0);
+      .stock-count strong {
+        font-size: 1rem;
+        font-weight: 800;
+        color: var(--brand);
         font-variant-numeric: tabular-nums;
       }
 
       .stock-track {
         width: 100%;
-        height: 4px;
-        background: var(--surface-3);
-        border-radius: var(--radius-full);
+        height: 6px;
+        background: #e0e0e0;
+        border-radius: 10px;
         overflow: hidden;
       }
 
       .stock-fill {
         height: 100%;
-        border-radius: var(--radius-full);
-        background: linear-gradient(90deg, var(--orange), var(--orange-bright));
-        transition: width 0.8s var(--ease), background 0.5s var(--ease);
-        position: relative;
-      }
-
-      .stock-fill::after {
-        content: "";
-        position: absolute;
-        right: 0;
-        top: -1px;
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--orange-bright);
-        box-shadow: 0 0 8px var(--orange-glow);
+        border-radius: 10px;
+        background: linear-gradient(90deg, var(--orange), #ff4d4d);
+        transition: width 0.8s ease, background 0.5s ease;
       }
 
       /* ================================
-         RIGHT PANEL: ANALYTICS
+         RIGHT PANEL — ANALYTICS
          ================================ */
       .panel-analytics {
-        background: var(--surface-2);
-        padding: 36px 28px;
+        background: var(--bg-secondary);
+        padding: 32px 24px;
         display: flex;
         flex-direction: column;
-        gap: 20px;
-        border-left: 1px solid rgba(255, 255, 255, 0.04);
+        gap: 18px;
+        border-left: 1px solid var(--border);
       }
 
       .chart-head {
@@ -561,34 +461,35 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 0.85rem;
+        font-size: 0.88rem;
         font-weight: 700;
-        color: var(--text-0);
+        color: var(--text-heading);
       }
 
-      .dot-green {
-        width: 7px;
-        height: 7px;
-        background: var(--green);
+      .dot-live {
+        width: 9px;
+        height: 9px;
+        background: #00c853;
         border-radius: 50%;
-        animation: greenPulse 2s infinite;
+        animation: livePulse 2s infinite;
       }
 
-      @keyframes greenPulse {
-        0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
-        70% { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+      @keyframes livePulse {
+        0% { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.6); }
+        70% { box-shadow: 0 0 0 5px rgba(0, 200, 83, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0); }
       }
 
-      .chart-pill {
-        font-size: 0.58rem;
+      .chart-badge {
+        font-size: 0.6rem;
         font-weight: 700;
-        color: var(--green);
+        color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.8px;
-        background: var(--green-dim);
+        background: var(--bg-white);
         padding: 4px 12px;
-        border-radius: var(--radius-full);
+        border-radius: 20px;
+        border: 1px solid var(--border);
       }
 
       .chart-area {
@@ -603,8 +504,8 @@
         display: flex;
         align-items: center;
         gap: 14px;
-        padding-top: 20px;
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
         margin-top: auto;
       }
 
@@ -614,59 +515,29 @@
       }
 
       .proof-avatars img {
-        width: 32px;
-        height: 32px;
+        width: 34px;
+        height: 34px;
         border-radius: 50%;
-        border: 2px solid var(--surface-2);
+        border: 2px solid var(--bg-white);
         object-fit: cover;
-        margin-left: -8px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-        transition: transform 0.2s var(--ease);
+        margin-left: -10px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
       }
 
       .proof-avatars img:first-child {
         margin-left: 0;
       }
 
-      .proof-avatars img:hover {
-        transform: translateY(-2px) scale(1.05);
-        z-index: 1;
-      }
-
-      .proof-copy {
-        font-size: 0.78rem;
-        color: var(--text-2);
+      .proof-text {
+        font-size: 0.8rem;
+        color: var(--text-body);
         line-height: 1.45;
       }
 
-      .proof-copy strong {
-        color: var(--text-0);
+      .proof-text strong {
+        color: var(--text-heading);
         font-weight: 700;
       }
-
-      /* ================================
-         STAGGERED ENTRANCE
-         ================================ */
-      @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(16px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      .panel-offer > * {
-        animation: fadeUp 0.5s var(--ease) both;
-      }
-      .panel-offer > *:nth-child(1) { animation-delay: 0.06s; }
-      .panel-offer > *:nth-child(2) { animation-delay: 0.12s; }
-      .panel-offer > *:nth-child(3) { animation-delay: 0.18s; }
-      .panel-offer > *:nth-child(4) { animation-delay: 0.24s; }
-      .panel-offer > *:nth-child(5) { animation-delay: 0.30s; }
-
-      .panel-analytics > * {
-        animation: fadeUp 0.5s var(--ease) both;
-      }
-      .panel-analytics > *:nth-child(1) { animation-delay: 0.18s; }
-      .panel-analytics > *:nth-child(2) { animation-delay: 0.24s; }
-      .panel-analytics > *:nth-child(3) { animation-delay: 0.30s; }
 
       /* ================================
          REDUCED MOTION
@@ -686,7 +557,7 @@
         .widget {
           display: flex;
           flex-direction: column;
-          max-width: 520px;
+          max-width: 500px;
         }
 
         .panel-offer,
@@ -696,7 +567,7 @@
 
         .panel-analytics {
           border-left: none;
-          border-top: 1px solid rgba(255, 255, 255, 0.04);
+          border-top: 1px solid var(--border);
         }
       }
 
@@ -704,50 +575,59 @@
          MOBILE (< 480px)
          ================================ */
       @media (max-width: 480px) {
-        body { padding: 12px; align-items: flex-start; }
+        body {
+          padding: 12px;
+          align-items: flex-start;
+        }
 
         .widget {
-          border-radius: var(--radius-md);
+          border-radius: 12px;
           max-width: 100%;
         }
 
         .panel-offer {
-          padding: 24px 18px;
-          gap: 18px;
+          padding: 22px 16px;
+          gap: 16px;
         }
 
         .panel-analytics {
-          padding: 24px 18px;
+          padding: 22px 16px;
         }
 
-        .brand-logo { width: 44px; height: 44px; }
-        .brand-name { font-size: 0.82rem; }
+        .brand-logo { width: 48px; height: 48px; }
+        .brand-name { font-size: 0.88rem; }
         .brand-sub { font-size: 0.58rem; }
 
-        .offer-card { padding: 16px 18px; }
+        .offer-banner { padding: 14px 16px; }
         .offer-icon { width: 36px; height: 36px; }
         .offer-icon svg { width: 16px; height: 16px; }
         .offer-headline { font-size: 0.92rem; }
-        .offer-subline { font-size: 0.65rem; }
+        .offer-sub { font-size: 0.65rem; }
 
         .coupon {
           flex-direction: column;
           align-items: stretch;
           gap: 10px;
-          padding: 14px;
+          padding: 12px;
         }
 
         .coupon-info { align-items: center; }
-        .coupon-btn { width: 100%; text-align: center; padding: 12px 18px; min-height: 48px; font-size: 0.75rem; }
+        .coupon-btn {
+          width: 100%;
+          text-align: center;
+          padding: 12px 18px;
+          min-height: 48px;
+          font-size: 0.75rem;
+        }
 
-        .slot-val { height: 48px; font-size: 1.3rem; }
+        .slot-val { height: 46px; font-size: 1.2rem; }
         .slot-lbl { font-size: 0.55rem; }
 
         .chart-area { height: 160px; }
-        .chart-title { font-size: 0.78rem; }
+        .chart-title { font-size: 0.8rem; }
 
-        .proof-avatars img { width: 28px; height: 28px; }
-        .proof-copy { font-size: 0.72rem; }
+        .proof-avatars img { width: 30px; height: 30px; }
+        .proof-text { font-size: 0.75rem; }
       }
 
       /* ================================
@@ -756,12 +636,12 @@
       @media (max-width: 360px) {
         body { padding: 8px; }
 
-        .panel-offer { padding: 20px 14px; gap: 14px; }
-        .panel-analytics { padding: 20px 14px; }
+        .panel-offer { padding: 18px 14px; gap: 14px; }
+        .panel-analytics { padding: 18px 14px; }
 
-        .offer-headline { font-size: 0.82rem; }
-        .coupon-code { font-size: 0.9rem; letter-spacing: 1px; }
-        .slot-val { height: 42px; font-size: 1.15rem; }
+        .offer-headline { font-size: 0.84rem; }
+        .coupon-code { font-size: 0.92rem; letter-spacing: 1px; }
+        .slot-val { height: 42px; font-size: 1.1rem; }
         .timer-slots { gap: 6px; }
       }
 
@@ -770,24 +650,19 @@
          ================================ */
       @media (hover: none) and (pointer: coarse) {
         .coupon:hover {
-          border-color: rgba(245, 130, 31, 0.3);
-          background: var(--surface-glass);
-          box-shadow: none;
+          background: var(--bg-warm);
+          border-color: var(--orange-border);
         }
 
         .coupon-btn:hover {
-          background: var(--orange);
+          background: var(--orange-cta);
           transform: none;
           box-shadow: none;
         }
 
         .coupon-btn:active {
-          background: #e0740f;
+          background: #e5520a;
           transform: scale(0.97);
-        }
-
-        .proof-avatars img:hover {
-          transform: none;
         }
       }
     </style>
@@ -807,8 +682,8 @@
           </div>
         </div>
 
-        <!-- Offer Card -->
-        <div class="offer-card">
+        <!-- Offer Banner -->
+        <div class="offer-banner">
           <div class="offer-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
@@ -817,7 +692,7 @@
           </div>
           <div class="offer-details">
             <span class="offer-headline">Flat &#8377;1,000 OFF &mdash; First 1000 Orders</span>
-            <span class="offer-subline">Limited flash sale. Grab yours now.</span>
+            <span class="offer-sub">Limited flash sale. Grab yours now.</span>
           </div>
         </div>
 
@@ -833,7 +708,7 @@
         </div>
 
         <!-- Timer -->
-        <div class="timer">
+        <div class="timer-section">
           <div class="timer-top">
             <span class="timer-label">Sale ends in</span>
             <span class="badge-live">
@@ -870,7 +745,7 @@
               </svg>
               High Demand
             </span>
-            <span class="stock-num">
+            <span class="stock-count">
               Only <strong id="orders-left">142</strong> left
             </span>
           </div>
@@ -886,10 +761,10 @@
 
         <div class="chart-head">
           <div class="chart-title">
-            <span class="dot-green"></span>
+            <span class="dot-live"></span>
             Live Purchase Activity
           </div>
-          <span class="chart-pill">Real-time</span>
+          <span class="chart-badge">Real-time</span>
         </div>
 
         <div class="chart-area">
@@ -902,7 +777,7 @@
             <img src="https://i.pravatar.cc/100?img=32" alt="Buyer" />
             <img src="https://i.pravatar.cc/100?img=47" alt="Buyer" />
           </div>
-          <div class="proof-copy">
+          <div class="proof-text">
             <strong><span id="recent-buyers">28</span> people</strong> purchased this kit<br />in the last 15 minutes.
           </div>
         </div>
@@ -914,7 +789,7 @@
       /* ==================================
          1. COUNTDOWN TIMER
          ================================== */
-      const TIMER_KEY = "ok_timer_v3";
+      const TIMER_KEY = "ok_timer_v4";
       const TIMER_MS = 2 * 24 * 60 * 60 * 1000;
 
       let target = (function () {
@@ -943,12 +818,14 @@
       /* ==================================
          2. STOCK SIMULATION
          ================================== */
-      const SK = "ok_stock_v3";
+      const SK = "ok_stock_v4";
       const START = 142, MIN = 3, VIZ = 200;
 
       let st = (function () {
-        let s = JSON.parse(localStorage.getItem(SK));
-        if (s && Date.now() - s.t < 864e5) return s;
+        try {
+          let s = JSON.parse(localStorage.getItem(SK));
+          if (s && Date.now() - s.t < 864e5) return s;
+        } catch (e) {}
         return { r: START, b: 28, t: Date.now() };
       })();
 
@@ -959,9 +836,9 @@
         document.getElementById("recent-buyers").textContent = st.b;
         const bar = document.getElementById("stock-bar");
         bar.style.width = (st.r / VIZ) * 100 + "%";
-        if (st.r > 100) bar.style.background = "linear-gradient(90deg, #f5821f, #ff9a44)";
-        else if (st.r > 50) bar.style.background = "linear-gradient(90deg, #ff6b3a, #e05020)";
-        else bar.style.background = "linear-gradient(90deg, #ef4444, #dc2626)";
+        if (st.r > 100) bar.style.background = "linear-gradient(90deg, #ff9800, #ff5722)";
+        else if (st.r > 50) bar.style.background = "linear-gradient(90deg, #ff5722, #d84315)";
+        else bar.style.background = "linear-gradient(90deg, #d32f2f, #b71c1c)";
       }
 
       function drop() {
@@ -992,7 +869,7 @@
          ================================== */
       const cx = document.getElementById("salesChart").getContext("2d");
       const grd = cx.createLinearGradient(0, 0, 0, 200);
-      grd.addColorStop(0, "rgba(245, 130, 31, 0.3)");
+      grd.addColorStop(0, "rgba(245, 130, 31, 0.35)");
       grd.addColorStop(1, "rgba(245, 130, 31, 0.0)");
 
       const chart = new Chart(cx, {
@@ -1004,15 +881,15 @@
             data: [14, 22, 17, 28, 24, 35],
             borderColor: "#f5821f",
             backgroundColor: grd,
-            borderWidth: 2,
-            pointBackgroundColor: "#1a1a1a",
+            borderWidth: 2.5,
+            pointBackgroundColor: "#ffffff",
             pointBorderColor: "#f5821f",
             pointBorderWidth: 2,
-            pointRadius: 3,
+            pointRadius: 3.5,
             pointHoverRadius: 6,
             pointHoverBackgroundColor: "#f5821f",
             fill: true,
-            tension: 0.45,
+            tension: 0.4,
           }],
         },
         options: {
@@ -1021,11 +898,11 @@
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: "rgba(0,0,0,0.85)",
-              titleFont: { family: "DM Sans", size: 11 },
-              bodyFont: { family: "DM Sans", size: 12, weight: "700" },
+              backgroundColor: "#121212",
+              titleFont: { family: "Poppins", size: 11 },
+              bodyFont: { family: "Poppins", size: 12, weight: "700" },
               padding: 10,
-              cornerRadius: 8,
+              cornerRadius: 6,
               displayColors: false,
               callbacks: { label: c => c.parsed.y + " orders" },
             },
@@ -1034,7 +911,7 @@
             x: {
               grid: { display: false },
               border: { display: false },
-              ticks: { font: { family: "DM Sans", size: 11, weight: "500" }, color: "#555" },
+              ticks: { font: { family: "Poppins", size: 11, weight: "500" }, color: "#7d7d7d" },
             },
             y: { display: false, suggestedMin: 0, suggestedMax: 50 },
           },
