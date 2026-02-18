@@ -1162,10 +1162,10 @@
          Session-aware: resets if stale or already at floor.
 
          Phases:
-           Calm   (167-100): slow ticks 8-14s, no bursts, -1 each
-           Active ( 99- 50): moderate 5-8s, 8% burst chance (-2 to -3)
-           Urgent ( 49- 30): faster 3-5s, 18% burst chance (-2 to -4)
-           Panic  ( 29-FLOOR): rapid 1.5-3s, 30% burst chance (-2 to -5)
+           Calm   (167-100): ticks 3-5s, no bursts, -1 each
+           Active ( 99- 50): moderate 2-3.5s, 10% burst (-2 to -3)
+           Urgent ( 49- 30): faster 1.2-2s, 20% burst (-2 to -4)
+           Panic  ( 29-FLOOR): rapid 0.6-1.2s, 35% burst (-2 to -5)
            Floor  (<=FLOOR): stop dropping, hover
          ================================== */
       const SK = "ok_stock_v5";
@@ -1222,15 +1222,15 @@
           n = 1;
         } else if (st.r > 50) {
           /* ACTIVE — occasional small bursts */
-          burst = Math.random() < 0.08;
+          burst = Math.random() < 0.10;
           n = burst ? ~~(Math.random() * 2) + 2 : 1; /* burst: 2-3 */
         } else if (st.r > 30) {
           /* URGENT — more frequent, bigger bursts */
-          burst = Math.random() < 0.18;
+          burst = Math.random() < 0.20;
           n = burst ? ~~(Math.random() * 3) + 2 : 1; /* burst: 2-4 */
         } else {
           /* PANIC — frequent large bursts */
-          burst = Math.random() < 0.30;
+          burst = Math.random() < 0.35;
           n = burst ? ~~(Math.random() * 4) + 2 : 1; /* burst: 2-5 */
         }
 
@@ -1251,15 +1251,15 @@
           setTimeout(function () {
             if (Math.random() < 0.2) pushChart();
             loop();
-          }, 8000 + ~~(Math.random() * 5000));
+          }, 4000 + ~~(Math.random() * 3000));
           return;
         }
 
         let lo, hi;
-        if (st.r > 100)     { lo = 8000;  hi = 14000; } /* Calm: 8-14s */
-        else if (st.r > 50)  { lo = 5000;  hi = 8000;  } /* Active: 5-8s */
-        else if (st.r > 30)  { lo = 3000;  hi = 5000;  } /* Urgent: 3-5s */
-        else                  { lo = 1500;  hi = 3000;  } /* Panic: 1.5-3s */
+        if (st.r > 100)     { lo = 3000;  hi = 5000;  } /* Calm: 3-5s */
+        else if (st.r > 50)  { lo = 2000;  hi = 3500;  } /* Active: 2-3.5s */
+        else if (st.r > 30)  { lo = 1200;  hi = 2000;  } /* Urgent: 1.2-2s */
+        else                  { lo = 600;   hi = 1200;  } /* Panic: 0.6-1.2s */
 
         setTimeout(function () {
           drop();
